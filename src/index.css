@@ -49,3 +49,34 @@
 .animate-slide-down {
   animation: slideDown 0.5s ease-out;
 }
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.4s ease-out;
+}
+
+/* Bouncing arrow animation for multiple items indicator */
+@keyframes bounceDown {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(10px);
+    opacity: 0.6;
+  }
+}
+
+.animate-bounce-down {
+  animation: bounceDown 1s ease-in-out infinite;
+}

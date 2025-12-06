@@ -453,7 +453,7 @@ export const orderProblemsService = {
 
   async syncProblemToGoogleSheet(problemId: string): Promise<void> {
     try {
-      console.log(`🔄 Starting Google Sheets sync for problem ${problemId}`);
+      console.log(`🔄 [SYNC START] Problem ID: ${problemId}`);
 
       const { data: problem, error: problemError } = await supabase
         .from('order_problems')
@@ -462,20 +462,29 @@ export const orderProblemsService = {
         .single();
 
       if (problemError || !problem) {
-        console.error('❌ Error fetching problem for sync:', problemError);
+        console.error('❌ [SYNC ERROR] Failed to fetch problem:', problemError);
         return;
       }
 
+      console.log(`📦 [SYNC INFO] Problem Details:`, {
+        orderNumber: problem.order_number,
+        sku: problem.sku,
+        status: problem.status,
+        rowIndex: problem.google_sheet_row_index,
+      });
+
       if (!problem.google_sheet_row_index) {
-        console.warn('⚠️ Problem does not have a Google Sheet row index, skipping sync');
+        console.warn('⚠️ [SYNC SKIP] No Google Sheet row index - problem not linked to sheet');
         return;
       }
 
       const settings = await googleSheetsService.getSettings();
       if (!settings?.google_sheets_id) {
-        console.warn('⚠️ Google Sheets not connected, skipping sync');
+        console.warn('⚠️ [SYNC SKIP] Google Sheets not connected');
         return;
       }
+
+      console.log(`📊 [SYNC TARGET] Spreadsheet ID: ${settings.google_sheets_id}`);
 
       const rowIndex = problem.google_sheet_row_index;
 
@@ -494,36 +503,58 @@ export const orderProblemsService = {
         problem.escalation_reason || '',
       ];
 
-      console.log(`📊 Syncing to Data!CC${rowIndex}:CN${rowIndex}`);
-      console.log('📋 Data to sync:', {
-        problemReason: problemData[0],
-        problemDescription: problemData[1],
-        reportedBy: problemData[2],
-        status: problemData[4],
-        resolutionDescription: problemData[7],
-        resolvedBy: problemData[8],
-        resolvedAt: problemData[9],
-      });
+      console.log(`📝 [SYNC RANGE] Writing to Data!CC${rowIndex}:CN${rowIndex}`);
+      console.log('📋 [SYNC DATA] Column mapping (CC-CN):');
+      console.log(`  CC (Problem Reason): "${problemData[0]}"`);
+      console.log(`  CD (Problem Description): "${problemData[1]}"`);
+      console.log(`  CE (Reported By): "${problemData[2]}"`);
+      console.log(`  CF (Reported At): "${problemData[3]}"`);
+      console.log(`  CG (Status): "${problemData[4]}"`);
+      console.log(`  CH (Assigned To): "${problemData[5]}"`);
+      console.log(`  CI (Picked Up At): "${problemData[6]}"`);
+      console.log(`  CJ (Resolution Description): "${problemData[7]}"`);
+      console.log(`  CK (Resolved By): "${problemData[8]}"`);
+      console.log(`  CL (Resolved At): "${problemData[9]}"`);
+      console.log(`  CM (Escalated At): "${problemData[10]}"`);
+      console.log(`  CN (Escalation Reason): "${problemData[11]}"`);
 
+      if (problem.status === 'resolved') {
+        console.log('🎯 [RESOLUTION DATA CHECK] Verifying resolution fields:');
+        console.log(`  ✓ Resolution Description: ${problemData[7] ? 'PRESENT' : '❌ MISSING'} - "${problemData[7]}"`);
+        console.log(`  ✓ Resolved By: ${problemData[8] ? 'PRESENT' : '❌ MISSING'} - "${problemData[8]}"`);
+        console.log(`  ✓ Resolved At: ${problemData[9] ? 'PRESENT' : '❌ MISSING'} - "${problemData[9]}"`);
+
+        if (!problemData[7] || !problemData[8] || !problemData[9]) {
+          console.error('❌ [RESOLUTION ERROR] Missing resolution data in database!');
+        }
+      }
+
+      console.log('📤 [SYNC WRITE] Sending data to Google Sheets API...');
       await googleSheetsService.writeSheetData(
         settings.google_sheets_id,
         `Data!CC${rowIndex}:CN${rowIndex}`,
         [problemData]
       );
+      console.log('✅ [SYNC WRITE] Data successfully written to Google Sheets');
 
+      const syncTimestamp = new Date().toISOString();
       await supabase
         .from('order_problems')
-        .update({ google_sheet_synced_at: new Date().toISOString() })
+        .update({ google_sheet_synced_at: syncTimestamp })
         .eq('id', problemId);
 
-      console.log(`✅ Successfully synced problem ${problemId} to Google Sheet row ${rowIndex}`);
+      console.log(`✅ [SYNC COMPLETE] Problem ${problemId} synced to row ${rowIndex}`);
+      console.log(`🕒 [SYNC TIME] ${syncTimestamp}`);
 
       if (problem.status === 'resolved') {
-        console.log(`✅ Resolution data synced: "${problem.resolution_description}" by ${problem.resolved_by} at ${problem.resolved_at}`);
+        console.log(`🎉 [RESOLUTION SYNCED] Order #${problem.order_number} resolution recorded to Google Sheets`);
       }
     } catch (error) {
-      console.error('❌ Error syncing problem to Google Sheet:', error);
-      console.error('❌ Error details:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('❌ [SYNC FAILED] Error syncing problem to Google Sheet:', error);
+      console.error('❌ [ERROR DETAILS]:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
     }
   },
 };

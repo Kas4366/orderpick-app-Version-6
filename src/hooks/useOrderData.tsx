@@ -90,6 +90,11 @@ export const useOrderData = () => {
   const [newOrdersCount, setNewOrdersCount] = useState(0);
   const [autoRefreshTimerId, setAutoRefreshTimerId] = useState<NodeJS.Timeout | null>(null);
 
+  // Old order viewing state (for Google Sheets background search)
+  const [oldOrderGroup, setOldOrderGroup] = useState<Order[] | null>(null);
+  const [oldOrderDate, setOldOrderDate] = useState<string | null>(null);
+  const [isViewingOldOrder, setIsViewingOldOrder] = useState(false);
+
   // Function to restore CSV images folder handle from persistence
   const restoreCsvImagesFolderHandle = async () => {
     try {
@@ -990,71 +995,121 @@ export const useOrderData = () => {
           await handleOrderComplete(foundOrder, employeeName);
         }
       } else {
-        // If not found in current orders, search the archive
-        console.log('🗄️ Order not found in current data, searching archive...');
-        
-        if (isArchiveInitialized) {
+        // If not found in current orders, check if Google Sheets is connected for background search
+        console.log('🗄️ Order not found in current data...');
+
+        const settings = await googleSheetsService.getSettings();
+
+        if (settings?.google_sheets_id) {
+          // Use Google Sheets background search
+          console.log('📊 Google Sheets connected, performing background search...');
+
           try {
-            const archiveResult = await archiveService.searchArchive(searchTerm);
-            
-            if (archiveResult.foundInArchive && archiveResult.orders.length > 0) {
-              const archivedOrder = archiveResult.orders[0];
-              console.log('✅ Found order in archive:', archivedOrder.orderNumber, 'from file:', archivedOrder.fileName);
-              
-              // Convert archived order to regular order and set as current
-              const orderFromArchive: Order = {
-                orderNumber: archivedOrder.orderNumber,
-                customerName: archivedOrder.customerName,
-                sku: archivedOrder.sku,
-                quantity: archivedOrder.quantity,
-                location: archivedOrder.location,
-                imageUrl: archivedOrder.imageUrl,
-                itemName: archivedOrder.itemName,
-                buyerPostcode: archivedOrder.buyerPostcode,
-                remainingStock: archivedOrder.remainingStock,
-                orderValue: archivedOrder.orderValue,
-                fileDate: archivedOrder.fileDate,
-                channelType: archivedOrder.channelType,
-                channel: archivedOrder.channel,
-                width: archivedOrder.width,
-                weight: archivedOrder.weight,
-                shipFromLocation: archivedOrder.shipFromLocation,
-                packageDimension: archivedOrder.packageDimension,
-                packagingType: archivedOrder.packagingType,
-                completed: archivedOrder.completed || false,
-                selroOrderId: archivedOrder.selroOrderId,
-                selroItemId: archivedOrder.selroItemId,
-                veeqoOrderId: archivedOrder.veeqoOrderId,
-                veeqoItemId: archivedOrder.veeqoItemId,
-              };
-              
-              setCurrentOrder(orderFromArchive);
-              
-              setSearchMessage(''); // Clear message on success
-              // Show a notification that this order was found in archive
-              const fileDate = archivedOrder.fileDate ? new Date(archivedOrder.fileDate).toLocaleDateString('en-GB') : 'Unknown date';
-              console.log(`📋 Loaded archived order from ${archivedOrder.fileName} (${fileDate})`);
-              
-              // Optionally show a visual indicator that this is from archive
-              // You could add a toast notification here if you implement one
-              
+            const columnMapping = await googleSheetsService.getColumnMapping();
+            const result = await googleSheetsService.searchAndGroupOrder(
+              settings.google_sheets_id,
+              searchTerm,
+              columnMapping
+            );
+
+            if (result.orders.length > 0) {
+              console.log(`✅ Found ${result.orders.length} items in Google Sheets`);
+
+              // Load images if local folder is available
+              if (csvImagesFolderHandle) {
+                for (const order of result.orders) {
+                  if (order.sku) {
+                    try {
+                      const imageUrl = await findImageFile(csvImagesFolderHandle, order.sku);
+                      if (imageUrl) {
+                        order.imageUrl = imageUrl;
+                      }
+                    } catch (error) {
+                      console.log(`🖼️ Error loading image for SKU "${order.sku}":`, error);
+                    }
+                  }
+                }
+              }
+
+              // Set old order viewing state
+              setOldOrderGroup(result.orders);
+              setOldOrderDate(result.orderDate);
+              setIsViewingOldOrder(true);
+              setCurrentOrder(result.orders[0]);
+              setSearchMessage('');
+
+              console.log(`📋 Now viewing old order from ${result.orderDate || 'unknown date'}`);
             } else {
-             // Clear current order when no match is found
-             setCurrentOrder(null);
+              // Not found in Google Sheets either
+              setCurrentOrder(null);
               setSearchMessage(`No order found for "${searchTerm}"`);
-              console.log('No order found for search term:', searchTerm);
+              console.log('No order found in Google Sheets for search term:', searchTerm);
             }
           } catch (error) {
-           // Clear current order when search fails
-           setCurrentOrder(null);
-            setSearchMessage(`No order found for "${searchTerm}"`);
-            console.error('Error searching archive:', error);
+            console.error('Error searching Google Sheets:', error);
+            setCurrentOrder(null);
+            setSearchMessage(`Error searching for "${searchTerm}"`);
           }
         } else {
-         // Clear current order when archive not available
-         setCurrentOrder(null);
-          setSearchMessage(`No order found for "${searchTerm}"`);
-          console.log('Archive not initialized, cannot search');
+          // No Google Sheets, fall back to archive search
+          console.log('🗄️ No Google Sheets connected, searching archive...');
+
+          if (isArchiveInitialized) {
+            try {
+              const archiveResult = await archiveService.searchArchive(searchTerm);
+
+              if (archiveResult.foundInArchive && archiveResult.orders.length > 0) {
+                const archivedOrder = archiveResult.orders[0];
+                console.log('✅ Found order in archive:', archivedOrder.orderNumber, 'from file:', archivedOrder.fileName);
+
+                // Convert archived order to regular order and set as current
+                const orderFromArchive: Order = {
+                  orderNumber: archivedOrder.orderNumber,
+                  customerName: archivedOrder.customerName,
+                  sku: archivedOrder.sku,
+                  quantity: archivedOrder.quantity,
+                  location: archivedOrder.location,
+                  imageUrl: archivedOrder.imageUrl,
+                  itemName: archivedOrder.itemName,
+                  buyerPostcode: archivedOrder.buyerPostcode,
+                  remainingStock: archivedOrder.remainingStock,
+                  orderValue: archivedOrder.orderValue,
+                  fileDate: archivedOrder.fileDate,
+                  channelType: archivedOrder.channelType,
+                  channel: archivedOrder.channel,
+                  width: archivedOrder.width,
+                  weight: archivedOrder.weight,
+                  shipFromLocation: archivedOrder.shipFromLocation,
+                  packageDimension: archivedOrder.packageDimension,
+                  packagingType: archivedOrder.packagingType,
+                  completed: archivedOrder.completed || false,
+                  selroOrderId: archivedOrder.selroOrderId,
+                  selroItemId: archivedOrder.selroItemId,
+                  veeqoOrderId: archivedOrder.veeqoOrderId,
+                  veeqoItemId: archivedOrder.veeqoItemId,
+                };
+
+                setCurrentOrder(orderFromArchive);
+
+                setSearchMessage('');
+                const fileDate = archivedOrder.fileDate ? new Date(archivedOrder.fileDate).toLocaleDateString('en-GB') : 'Unknown date';
+                console.log(`📋 Loaded archived order from ${archivedOrder.fileName} (${fileDate})`);
+
+              } else {
+                setCurrentOrder(null);
+                setSearchMessage(`No order found for "${searchTerm}"`);
+                console.log('No order found for search term:', searchTerm);
+              }
+            } catch (error) {
+              setCurrentOrder(null);
+              setSearchMessage(`No order found for "${searchTerm}"`);
+              console.error('Error searching archive:', error);
+            }
+          } else {
+            setCurrentOrder(null);
+            setSearchMessage(`No order found for "${searchTerm}"`);
+            console.log('Archive not initialized, cannot search');
+          }
         }
       }
     } catch (error) {
@@ -1154,27 +1209,35 @@ export const useOrderData = () => {
   // Handle order completion
   const handleOrderComplete = async (order: Order, employeeName?: string) => {
     try {
+      // Check if we're viewing an old order
+      const isOldOrder = isViewingOldOrder && oldOrderGroup !== null;
+
       // Get all items in the group (merged orders or multiple items)
-      const groupedItems = getGroupedItems(order, orders);
+      const groupedItems = isOldOrder ? oldOrderGroup : getGroupedItems(order, orders);
 
       console.log(`📦 Completing ${groupedItems.length} items in group for order ${order.orderNumber}`);
+      if (isOldOrder) {
+        console.log('📅 This is an old order - will return to current orders after completion');
+      }
 
       // Mark all items in the group as completed
       groupedItems.forEach(item => {
         item.completed = true;
       });
 
-      // Update local state
-      setOrders(prevOrders =>
-        prevOrders.map(o => {
-          const isInGroup = groupedItems.some(gi =>
-            gi.orderNumber === o.orderNumber &&
-            gi.sku === o.sku &&
-            gi.customerName === o.customerName
-          );
-          return isInGroup ? { ...o, completed: true } : o;
-        })
-      );
+      // Update local state only if NOT an old order
+      if (!isOldOrder) {
+        setOrders(prevOrders =>
+          prevOrders.map(o => {
+            const isInGroup = groupedItems.some(gi =>
+              gi.orderNumber === o.orderNumber &&
+              gi.sku === o.sku &&
+              gi.customerName === o.customerName
+            );
+            return isInGroup ? { ...o, completed: true } : o;
+          })
+        );
+      }
 
       // If using Selro API, update the order status in Selro
       if (isUsingSelroApi && order.selroOrderId && order.selroItemId) {
@@ -1224,15 +1287,27 @@ export const useOrderData = () => {
           console.log('ℹ️ No orders with rowIndex found - skipping Google Sheets update');
         }
       }
+
+      // If this was an old order, return to current orders
+      if (isOldOrder) {
+        console.log('✅ Old order completed, returning to current orders');
+        setIsViewingOldOrder(false);
+        setOldOrderGroup(null);
+        setOldOrderDate(null);
+        setCurrentOrder(null);
+        setSearchMessage('Old order completed successfully');
+      }
     } catch (error) {
       console.error('Error marking order as complete:', error);
       // Revert local state if API update failed
       order.completed = false;
-      setOrders(prevOrders =>
-        prevOrders.map(o =>
-          o.orderNumber === order.orderNumber && o.sku === order.sku ? order : o
-        )
-      );
+      if (!isViewingOldOrder) {
+        setOrders(prevOrders =>
+          prevOrders.map(o =>
+            o.orderNumber === order.orderNumber && o.sku === order.sku ? order : o
+          )
+        );
+      }
       alert('Failed to update order status. Please try again.');
     }
   };
@@ -1378,6 +1453,16 @@ export const useOrderData = () => {
       message: '',
       isLoading: false
     });
+  };
+
+  // Return to current orders from old order view
+  const returnToCurrentOrders = () => {
+    console.log('🔙 Returning to current orders view');
+    setIsViewingOldOrder(false);
+    setOldOrderGroup(null);
+    setOldOrderDate(null);
+    setCurrentOrder(null);
+    setSearchMessage('');
   };
 
   // Load orders from Google Sheets
@@ -1761,5 +1846,10 @@ export const useOrderData = () => {
     newOrdersCount,
     handleAddNewOrders,
     handleDismissNewOrders,
+    // Old order viewing functionality
+    isViewingOldOrder,
+    oldOrderGroup,
+    oldOrderDate,
+    returnToCurrentOrders,
   };
 };

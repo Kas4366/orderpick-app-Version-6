@@ -770,11 +770,20 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 animate-pulse">
-                <h4 className="text-md font-semibold text-blue-800 mb-2">Multiple Items Order</h4>
-                <p className="text-sm text-blue-700">
-                  This order contains {groupedOrderItems.length} different items. All items are shown below for efficient picking.
+              <div className="bg-red-600 border-2 border-red-700 rounded-lg p-4 mb-4 animate-pulse shadow-lg">
+                <div className="flex items-center gap-3 mb-3">
+                  <AlertTriangle className="h-6 w-6 text-white" />
+                  <h4 className="text-lg font-bold text-white">MULTIPLE ITEMS ORDER</h4>
+                </div>
+                <p className="text-sm text-white font-medium mb-3">
+                  This order contains {groupedOrderItems.length} different items. Scroll down to see all items below.
                 </p>
+                <div className="flex justify-center pt-2">
+                  <div className="flex flex-col items-center gap-1">
+                    <ChevronDown className="h-8 w-8 text-white animate-bounce-down" />
+                    <p className="text-xs text-white font-bold">SCROLL DOWN</p>
+                  </div>
+                </div>
               </div>
             )}
 

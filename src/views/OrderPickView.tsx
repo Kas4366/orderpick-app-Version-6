@@ -3,6 +3,7 @@ import { ImagePreviewModal } from '../components/ImagePreviewModal';
 import { PackingInstructionModal } from '../components/PackingInstructionModal';
 import { OrderMergeDialog } from '../components/OrderMergeDialog';
 import { NewOrdersNotificationPopup } from '../components/NewOrdersNotificationPopup';
+import { ResolutionPopupNotification } from '../components/ResolutionPopupNotification';
 import { FileUploadArea } from '../components/FileUploadArea';
 import { OrderDisplay } from '../components/OrderDisplay';
 import { NoOrdersState } from '../components/NoOrdersState';
@@ -10,6 +11,7 @@ import { OrderSidebar, FilterState } from '../components/OrderSidebar';
 import { CustomerSearch } from '../components/CustomerSearch';
 import { SettingsModal } from '../components/SettingsModal';
 import { EmployeeLogin } from '../components/EmployeeLogin';
+import { OldOrderBanner } from '../components/OldOrderBanner';
 import { useOrderData } from '../hooks/useOrderData';
 import { useEmployee } from '../contexts/EmployeeContext';
 import { Settings as SettingsIcon, User, LogOut } from 'lucide-react';
@@ -108,6 +110,11 @@ export const OrderPickView: React.FC<OrderPickViewProps> = ({ savedOrderPickStat
     currentOrderPackagingType,
     currentOrderBoxName,
     currentOrderBoxColor,
+    // Old order viewing
+    isViewingOldOrder,
+    oldOrderGroup,
+    oldOrderDate,
+    returnToCurrentOrders,
   } = useOrderData();
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -220,7 +227,7 @@ export const OrderPickView: React.FC<OrderPickViewProps> = ({ savedOrderPickStat
       <div className="flex-1 py-2">
         <div className="flex w-full max-w-[1600px] mx-auto px-4 py-2 gap-6">
           <OrderSidebar
-            orders={orders}
+            orders={isViewingOldOrder ? oldOrderGroup || [] : orders}
             currentOrder={currentOrder}
             currentOrderIndex={currentOrderIndex}
             onOrderSelect={setCurrentOrder}
@@ -235,9 +242,9 @@ export const OrderPickView: React.FC<OrderPickViewProps> = ({ savedOrderPickStat
                   <h2 className="text-2xl font-bold text-gray-800">Order Picking Assistant</h2>
                   <div className="flex items-center gap-4 text-gray-600">
                     <span>
-                      {orders.length} orders loaded • {orders.filter(order => order.completed).length} completed
+                      {isViewingOldOrder ? `${oldOrderGroup?.length || 0} items in old order` : `${orders.length} orders loaded • ${orders.filter(order => order.completed).length} completed`}
                     </span>
-                    {currentOrderIndex >= 0 && (
+                    {!isViewingOldOrder && currentOrderIndex >= 0 && (
                       <span className="text-blue-600">
                         Order {currentOrderIndex + 1} of {orders.length}
                       </span>
@@ -265,11 +272,20 @@ export const OrderPickView: React.FC<OrderPickViewProps> = ({ savedOrderPickStat
                 />
               </div>
             </div>
-            
+
+            {isViewingOldOrder && oldOrderGroup && currentOrder && (
+              <OldOrderBanner
+                orderDate={oldOrderDate}
+                orderNumber={currentOrder.orderNumber}
+                itemCount={oldOrderGroup.length}
+                onReturnToCurrent={returnToCurrentOrders}
+              />
+            )}
+
             {currentOrder ? (
               <OrderDisplay
                 order={currentOrder}
-                orders={orders}
+                orders={isViewingOldOrder ? oldOrderGroup || [] : orders}
                 currentOrderIndex={currentOrderIndex}
                 onOrderComplete={(order) => handleOrderComplete(order, currentSession?.employee.name)}
                 voiceSettings={voiceSettings}
@@ -362,6 +378,8 @@ export const OrderPickView: React.FC<OrderPickViewProps> = ({ savedOrderPickStat
         onAddOrders={handleAddNewOrders}
         onDismiss={handleDismissNewOrders}
       />
+
+      <ResolutionPopupNotification employeeName={currentSession.employee.name} />
     </div>
   );
 };

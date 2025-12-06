@@ -450,4 +450,78 @@ export const googleSheetsService = {
       return { success: false, count: 0, error: errorMessage };
     }
   },
+
+  async searchAndGroupOrder(sheetId: string, searchTerm: string, columnMapping?: CsvColumnMapping | null): Promise<{ orders: Order[], orderDate: string | null }> {
+    console.log(`🔍 Background search in Google Sheets for: "${searchTerm}"`);
+
+    const allOrders = await this.fetchOrders(sheetId, undefined, columnMapping);
+
+    if (allOrders.length === 0) {
+      console.log('⚠️ No orders found in Google Sheets');
+      return { orders: [], orderDate: null };
+    }
+
+    const searchTermLower = searchTerm.toLowerCase();
+    const normalizedSearchTerm = searchTerm.replace(/\s/g, '').toUpperCase();
+
+    let matchedOrder: Order | null = null;
+
+    for (const order of allOrders) {
+      if (order.customerName.toLowerCase().includes(searchTermLower)) {
+        matchedOrder = order;
+        break;
+      }
+
+      if (order.orderNumber.toLowerCase().includes(searchTermLower)) {
+        matchedOrder = order;
+        break;
+      }
+
+      if (order.buyerPostcode && order.buyerPostcode.replace(/\s/g, '').toUpperCase().includes(normalizedSearchTerm)) {
+        matchedOrder = order;
+        break;
+      }
+
+      if (order.sku.toLowerCase().includes(searchTermLower)) {
+        matchedOrder = order;
+        break;
+      }
+    }
+
+    if (!matchedOrder) {
+      console.log(`❌ No matching order found for: "${searchTerm}"`);
+      return { orders: [], orderDate: null };
+    }
+
+    console.log(`✅ Found matching order: ${matchedOrder.orderNumber}`);
+
+    const hasMergedOrders = allOrders.some(o =>
+      o.customerName === matchedOrder!.customerName &&
+      o.buyerPostcode === matchedOrder!.buyerPostcode &&
+      o.orderNumber !== matchedOrder!.orderNumber &&
+      o.buyerPostcode && o.buyerPostcode.trim() !== ''
+    );
+
+    let groupedOrders: Order[] = [];
+
+    if (hasMergedOrders) {
+      console.log('📦 Detected merged orders (same customer + postcode)');
+      groupedOrders = allOrders.filter(o =>
+        o.customerName === matchedOrder!.customerName &&
+        o.buyerPostcode === matchedOrder!.buyerPostcode
+      );
+    } else {
+      console.log('📦 Grouping items by order number');
+      groupedOrders = allOrders.filter(o =>
+        o.orderNumber === matchedOrder!.orderNumber &&
+        o.customerName === matchedOrder!.customerName
+      );
+    }
+
+    console.log(`✅ Grouped ${groupedOrders.length} items for this order`);
+
+    const orderDate = matchedOrder.fileDate || null;
+
+    return { orders: groupedOrders, orderDate };
+  },
 };
