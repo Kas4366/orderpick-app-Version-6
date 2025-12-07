@@ -242,7 +242,7 @@ export const googleSheetsService = {
         imageUrl: undefined,
         remainingStock: remainingStock,
         orderValue: orderValue,
-        fileDate: fileDate,
+        fileDate: downloadedDate,
         channelType: channelType || undefined,
         channel: channel || undefined,
         itemName: itemName || undefined,
