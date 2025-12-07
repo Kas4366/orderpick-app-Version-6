@@ -59,7 +59,7 @@ export const OldOrderBanner: React.FC<OldOrderBannerProps> = ({
         </button>
       </div>
       <div className="mt-3 text-sm text-amber-700 bg-amber-100 rounded p-2">
-        <strong>Note:</strong> You are viewing an old order. After completing this order, you will automatically return to your current day's orders.
+        <strong>Note:</strong> You are viewing an old order. Click 'Return to Current Orders' when ready to go back to today's orders.
       </div>
     </div>
   );

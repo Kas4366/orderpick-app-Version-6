@@ -1288,14 +1288,9 @@ export const useOrderData = () => {
         }
       }
 
-      // If this was an old order, return to current orders
+      // If this was an old order, keep viewing it (user will manually return)
       if (isOldOrder) {
-        console.log('✅ Old order completed, returning to current orders');
-        setIsViewingOldOrder(false);
-        setOldOrderGroup(null);
-        setOldOrderDate(null);
-        setCurrentOrder(null);
-        setSearchMessage('Old order completed successfully');
+        console.log('✅ Old order completed - staying on old order view');
       }
     } catch (error) {
       console.error('Error marking order as complete:', error);

@@ -464,64 +464,89 @@ export const googleSheetsService = {
     const searchTermLower = searchTerm.toLowerCase();
     const normalizedSearchTerm = searchTerm.replace(/\s/g, '').toUpperCase();
 
-    let matchedOrder: Order | null = null;
+    // Find all matching order instances
+    const matchingOrders: Order[] = [];
 
     for (const order of allOrders) {
-      if (order.customerName.toLowerCase().includes(searchTermLower)) {
-        matchedOrder = order;
-        break;
-      }
-
-      if (order.orderNumber.toLowerCase().includes(searchTermLower)) {
-        matchedOrder = order;
-        break;
-      }
-
-      if (order.buyerPostcode && order.buyerPostcode.replace(/\s/g, '').toUpperCase().includes(normalizedSearchTerm)) {
-        matchedOrder = order;
-        break;
-      }
-
-      if (order.sku.toLowerCase().includes(searchTermLower)) {
-        matchedOrder = order;
-        break;
+      if (order.customerName.toLowerCase().includes(searchTermLower) ||
+          order.orderNumber.toLowerCase().includes(searchTermLower) ||
+          (order.buyerPostcode && order.buyerPostcode.replace(/\s/g, '').toUpperCase().includes(normalizedSearchTerm)) ||
+          order.sku.toLowerCase().includes(searchTermLower)) {
+        matchingOrders.push(order);
       }
     }
 
-    if (!matchedOrder) {
+    if (matchingOrders.length === 0) {
       console.log(`❌ No matching order found for: "${searchTerm}"`);
       return { orders: [], orderDate: null };
     }
 
-    console.log(`✅ Found matching order: ${matchedOrder.orderNumber}`);
+    console.log(`✅ Found ${matchingOrders.length} matching order instance(s)`);
 
-    const hasMergedOrders = allOrders.some(o =>
-      o.customerName === matchedOrder!.customerName &&
-      o.buyerPostcode === matchedOrder!.buyerPostcode &&
-      o.orderNumber !== matchedOrder!.orderNumber &&
+    // Extract date information from each matching order using the column mapping
+    const mapping = columnMapping || defaultCsvColumnMapping;
+    const orderDates: string[] = [];
+
+    for (const order of matchingOrders) {
+      // Try to get date from fileDate or orderDate field
+      const dateValue = order.fileDate;
+
+      if (!dateValue || dateValue.trim() === '') {
+        console.log(`❌ No order found - missing date information for order ${order.orderNumber}`);
+        return { orders: [], orderDate: null };
+      }
+
+      orderDates.push(dateValue);
+    }
+
+    // Find the latest date
+    const sortedDates = orderDates.sort((a, b) => {
+      const dateA = new Date(a).getTime();
+      const dateB = new Date(b).getTime();
+      return dateB - dateA; // Descending order (latest first)
+    });
+
+    const latestDate = sortedDates[0];
+    console.log(`📅 Latest date found: ${latestDate}`);
+
+    // Filter to only include orders from the latest date
+    const ordersFromLatestDate = matchingOrders.filter(order => order.fileDate === latestDate);
+    console.log(`✅ Filtered to ${ordersFromLatestDate.length} order(s) from latest date`);
+
+    if (ordersFromLatestDate.length === 0) {
+      console.log('⚠️ No orders found from latest date');
+      return { orders: [], orderDate: null };
+    }
+
+    // Use the first order from latest date for grouping logic
+    const matchedOrder = ordersFromLatestDate[0];
+
+    // Check if there are merged orders (same customer + postcode, different order numbers)
+    const hasMergedOrders = ordersFromLatestDate.some(o =>
+      o.customerName === matchedOrder.customerName &&
+      o.buyerPostcode === matchedOrder.buyerPostcode &&
+      o.orderNumber !== matchedOrder.orderNumber &&
       o.buyerPostcode && o.buyerPostcode.trim() !== ''
     );
 
     let groupedOrders: Order[] = [];
 
     if (hasMergedOrders) {
-      console.log('📦 Detected merged orders (same customer + postcode)');
-      groupedOrders = allOrders.filter(o =>
-        o.customerName === matchedOrder!.customerName &&
-        o.buyerPostcode === matchedOrder!.buyerPostcode
+      console.log('📦 Detected merged orders (same customer + postcode) from latest date');
+      groupedOrders = ordersFromLatestDate.filter(o =>
+        o.customerName === matchedOrder.customerName &&
+        o.buyerPostcode === matchedOrder.buyerPostcode
       );
     } else {
-      console.log('📦 Grouping items by order number');
-      groupedOrders = allOrders.filter(o =>
-        o.orderNumber === matchedOrder!.orderNumber &&
-        o.customerName === matchedOrder!.customerName
+      console.log('📦 Grouping items by order number from latest date');
+      groupedOrders = ordersFromLatestDate.filter(o =>
+        o.orderNumber === matchedOrder.orderNumber &&
+        o.customerName === matchedOrder.customerName
       );
     }
 
-    console.log(`✅ Grouped ${groupedOrders.length} items for this order`);
+    console.log(`✅ Grouped ${groupedOrders.length} items for this order from latest date`);
 
-    const orderDate = matchedOrder.fileDate || null;
-
-    return { orders: groupedOrders, orderDate };
+    return { orders: groupedOrders, orderDate: latestDate };
   },
 };
