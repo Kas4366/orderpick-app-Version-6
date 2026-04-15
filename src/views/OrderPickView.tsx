@@ -340,7 +340,10 @@ export const OrderPickView: React.FC<OrderPickViewProps> = ({ savedOrderPickStat
         onSaveBoxNames={saveCustomBoxNames}
         autoCompleteEnabled={autoCompleteEnabled}
         onSaveOtherSettings={saveOtherSettings}
-        onLoadOrdersFromGoogleSheets={loadOrdersFromGoogleSheets}
+        onLoadOrdersFromGoogleSheets={async (selectedDate: string) => {
+          await loadOrdersFromGoogleSheets(selectedDate);
+          setIsSettingsOpen(false);
+        }}
       />
 
       <ImagePreviewModal

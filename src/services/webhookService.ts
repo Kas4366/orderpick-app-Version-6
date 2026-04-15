@@ -13,6 +13,16 @@ interface ReorderInfoPayload {
   secretKey?: string;
 }
 
+interface LowStockPayload {
+  action: 'add' | 'remove';
+  sku: string;
+  stockLevel: number;
+  location: string;
+  orderNumber: string;
+  markedDate: string;
+  secretKey?: string;
+}
+
 interface WebhookResponse {
   success: boolean;
   message?: string;
@@ -201,6 +211,104 @@ export const webhookService = {
       });
     } catch (error) {
       console.error('Failed to save webhook test result:', error);
+    }
+  },
+
+  async sendLowStockInfo(
+    action: 'add' | 'remove',
+    sku: string,
+    stockLevel: number,
+    location: string,
+    orderNumber: string,
+    markedDate: string
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const settings = await googleSheetsService.getSettings();
+
+      if (!settings) {
+        console.warn('⚠️ No app settings found');
+        return { success: false, message: 'Settings not configured' };
+      }
+
+      if (!settings.webhook_enabled) {
+        console.log('ℹ️ Webhook is disabled, skipping low stock update');
+        return { success: false, message: 'Webhook disabled' };
+      }
+
+      if (!settings.apps_script_webhook_url) {
+        console.warn('⚠️ Webhook URL not configured');
+        return { success: false, message: 'Webhook URL not configured' };
+      }
+
+      console.log(`📤 Sending low stock ${action} via proxy for SKU ${sku}...`);
+
+      const payload: LowStockPayload = {
+        action,
+        sku,
+        stockLevel,
+        location,
+        orderNumber,
+        markedDate,
+      };
+
+      if (settings.apps_script_secret_key) {
+        payload.secretKey = settings.apps_script_secret_key;
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      try {
+        const response = await fetch(EDGE_FUNCTION_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            appsScriptUrl: settings.apps_script_webhook_url,
+            payload,
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`❌ Low stock webhook proxy request failed with status ${response.status}:`, errorText);
+          return {
+            success: false,
+            message: `Webhook error: ${response.status} ${response.statusText}`,
+          };
+        }
+
+        const result: WebhookResponse = await response.json();
+
+        if (result.success) {
+          console.log(`✅ Successfully sent low stock ${action} for SKU ${sku}`);
+          return { success: true, message: result.message };
+        } else {
+          console.error('❌ Webhook returned error:', result.error || result.message);
+          return {
+            success: false,
+            message: result.error || result.message || 'Unknown webhook error',
+          };
+        }
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+
+        if (fetchError.name === 'AbortError') {
+          console.error('❌ Low stock webhook request timed out after 15 seconds');
+          return { success: false, message: 'Request timeout' };
+        }
+
+        console.error('❌ Network error during low stock webhook request:', fetchError);
+        return { success: false, message: `Network error: ${fetchError.message}` };
+      }
+    } catch (error: any) {
+      console.error('❌ Error in sendLowStockInfo:', error);
+      return { success: false, message: error.message || 'Unknown error' };
     }
   },
 

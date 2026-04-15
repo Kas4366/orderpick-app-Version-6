@@ -8,7 +8,7 @@ import { dateUtils } from '../utils/dateUtils';
 import { webhookService } from '../services/webhookService';
 
 interface GoogleSheetSettingsProps {
-  onLoadOrders?: (selectedDate: string) => void;
+  onLoadOrders?: (selectedDate: string) => Promise<void>;
 }
 
 export const GoogleSheetsSettings: React.FC<GoogleSheetSettingsProps> = ({ onLoadOrders }) => {
@@ -162,7 +162,7 @@ export const GoogleSheetsSettings: React.FC<GoogleSheetSettingsProps> = ({ onLoa
       setLastSyncTime(new Date());
 
       if (onLoadOrders) {
-        onLoadOrders(selectedDate);
+        await onLoadOrders(selectedDate);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load orders';
@@ -251,6 +251,20 @@ export const GoogleSheetsSettings: React.FC<GoogleSheetSettingsProps> = ({ onLoa
 
   return (
     <div className="space-y-6">
+      {isLoadingOrders && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-6">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full border-4 border-blue-100"></div>
+              <div className="absolute inset-0 w-20 h-20 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-semibold text-gray-800">Loading Orders</p>
+              <p className="text-sm text-gray-500 mt-1">Please wait while your orders are being fetched...</p>
+            </div>
+          </div>
+        </div>
+      )}
       <div>
         <h3 className="text-lg font-semibold text-gray-800 mb-2">
           Google Sheets Integration

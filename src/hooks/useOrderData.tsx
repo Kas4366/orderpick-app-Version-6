@@ -835,6 +835,25 @@ export const useOrderData = () => {
           console.error(`❌ Error sending reorder info for row ${order.rowIndex}:`, error);
         }
       }
+
+      try {
+        console.log(`📤 Adding SKU ${order.sku} to Low stock items sheet`);
+        const lowStockResult = await webhookService.sendLowStockInfo(
+          'add',
+          order.sku,
+          order.remainingStock,
+          order.location,
+          order.orderNumber,
+          markedDate
+        );
+        if (lowStockResult.success) {
+          console.log(`✅ Added ${order.sku} to Low stock items sheet`);
+        } else {
+          console.warn(`⚠️ Failed to add ${order.sku} to Low stock items sheet: ${lowStockResult.message}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error adding to Low stock items sheet for SKU ${order.sku}:`, error);
+      }
     } else {
       console.log('📦 useOrderData: Item already exists in stock tracking:', order.sku);
     }
@@ -864,6 +883,27 @@ export const useOrderData = () => {
         }
       } catch (error) {
         console.error(`❌ Error clearing reorder info for row ${itemToRemove.rowIndex}:`, error);
+      }
+    }
+
+    if (itemToRemove) {
+      try {
+        console.log(`📤 Removing SKU ${sku} from Low stock items sheet`);
+        const lowStockResult = await webhookService.sendLowStockInfo(
+          'remove',
+          sku,
+          itemToRemove.currentStock,
+          itemToRemove.location,
+          orderNumber,
+          markedDate
+        );
+        if (lowStockResult.success) {
+          console.log(`✅ Removed ${sku} from Low stock items sheet`);
+        } else {
+          console.warn(`⚠️ Failed to remove ${sku} from Low stock items sheet: ${lowStockResult.message}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error removing from Low stock items sheet for SKU ${sku}:`, error);
       }
     }
   };

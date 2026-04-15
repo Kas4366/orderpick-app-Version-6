@@ -7,10 +7,16 @@ const corsHeaders = {
 };
 
 interface PackerInfoPayload {
-  rowIndex: number;
+  rowIndex?: number;
   packerName?: string;
   packedTime?: string;
   reorderTime?: string;
+  action?: 'add' | 'remove';
+  sku?: string;
+  stockLevel?: number;
+  location?: string;
+  orderNumber?: string;
+  markedDate?: string;
   secretKey?: string;
 }
 
@@ -56,7 +62,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (!payload || (!payload.packerName && !payload.reorderTime && payload.reorderTime !== '')) {
+    if (!payload || (!payload.packerName && !payload.reorderTime && payload.reorderTime !== '' && !payload.action)) {
       return new Response(
         JSON.stringify({ success: false, error: "Missing required payload fields" }),
         {
