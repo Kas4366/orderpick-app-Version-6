@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { MapPin, Box, Check, Volume2, VolumeX, Package, User, Hash, AlertTriangle, Clock, DollarSign, Calendar, Truck, CheckCircle, ChevronDown, ChevronUp, Image, AlertCircle } from 'lucide-react';
 import { Order } from '../types/Order';
 import { VoiceSettings } from '../types/VoiceSettings';
-import { StockTrackingItem } from '../types/StockTracking';
+import { StockTrackingItem, LowStockItem } from '../types/StockTracking';
 import { ReportProblemModal } from './ReportProblemModal';
 import { orderProblemsService } from '../services/orderProblemsService';
 import { useEmployee } from '../contexts/EmployeeContext';
@@ -28,6 +28,9 @@ interface OrderDisplayProps {
   onMarkForReorder: (order: Order) => void;
   stockTrackingItems: StockTrackingItem[];
   onUnmarkForReorder: (sku: string, markedDate: string, orderNumber: string) => void;
+  lowStockItems: LowStockItem[];
+  onMarkLowStock: (order: Order) => void;
+  onUnmarkLowStock: (sku: string, markedDate: string, orderNumber: string) => void;
   autoCompleteEnabled?: boolean;
   packagingType?: string | null;
   currentOrderBoxName?: string | null;
@@ -45,6 +48,9 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
   onMarkForReorder,
   stockTrackingItems,
   onUnmarkForReorder,
+  lowStockItems,
+  onMarkLowStock,
+  onUnmarkLowStock,
   autoCompleteEnabled = false,
   packagingType,
   currentOrderBoxName,
@@ -74,7 +80,22 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
   const currentTrackedItem = useMemo(() => {
     return getTrackedItem(order.sku, order.orderNumber);
   }, [stockTrackingItems, order.sku, order.orderNumber]);
-  
+
+  const currentLowStockItem = useMemo(() => {
+    return lowStockItems.find(
+      item => item.sku === order.sku && item.orderNumber === order.orderNumber
+    );
+  }, [lowStockItems, order.sku, order.orderNumber]);
+
+  const handleLowStockToggle = (targetOrder?: Order) => {
+    const orderToUse = targetOrder || order;
+    if (currentLowStockItem) {
+      onUnmarkLowStock(currentLowStockItem.sku, currentLowStockItem.markedDate, currentLowStockItem.orderNumber);
+    } else {
+      onMarkLowStock(orderToUse);
+    }
+  };
+
   // Global spacebar listener for reorder checkbox - FIXED
   useEffect(() => {
     const handleSpacebarPress = (e: KeyboardEvent) => {
@@ -789,6 +810,9 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
 
             {groupedOrderItems.map((item, index) => {
               const itemTracked = getTrackedItem(item.sku, item.orderNumber);
+              const itemLowStock = lowStockItems.find(
+                ls => ls.sku === item.sku && ls.orderNumber === item.orderNumber
+              );
               return (
               <div key={`${item.sku}-${item.orderNumber}-${index}`} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -908,7 +932,7 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
                         </div>
                       )}
 
-                      <div className="mt-4">
+                      <div className="mt-4 space-y-2">
                         <div className="bg-white border border-gray-200 rounded-lg p-3">
                           <div className="flex items-center gap-3">
                             <input
@@ -928,6 +952,41 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
                             <div className="mt-2 flex items-center gap-1 text-xs text-green-600">
                               <CheckCircle className="h-3 w-3" />
                               <span>Added to reorder list</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div
+                          className={`border-2 rounded-lg p-3 transition-colors ${
+                            itemLowStock
+                              ? 'bg-red-50 border-red-500'
+                              : 'bg-red-50 border-red-300 hover:border-red-400'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={!!itemLowStock}
+                              onChange={() => itemLowStock
+                                ? onUnmarkLowStock(itemLowStock.sku, itemLowStock.markedDate, itemLowStock.orderNumber)
+                                : onMarkLowStock(item)
+                              }
+                              className="h-4 w-4 text-red-600 focus:ring-red-500 border-red-400 rounded cursor-pointer accent-red-600"
+                            />
+                            <label
+                              className="text-sm font-semibold text-red-700 cursor-pointer"
+                              onClick={() => itemLowStock
+                                ? onUnmarkLowStock(itemLowStock.sku, itemLowStock.markedDate, itemLowStock.orderNumber)
+                                : onMarkLowStock(item)
+                              }
+                            >
+                              {itemLowStock ? 'Marked as low in stock ✓' : 'Low in stock'}
+                            </label>
+                          </div>
+                          {itemLowStock && (
+                            <div className="mt-2 flex items-center gap-1 text-xs text-red-600">
+                              <AlertTriangle className="h-3 w-3" />
+                              <span>{itemLowStock.markedDate} at {itemLowStock.markedTime}</span>
                             </div>
                           )}
                         </div>
@@ -1095,7 +1154,40 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
                   </div>
                 )}
               </div>
-              
+
+              {/* Low in Stock Checkbox */}
+              <div
+                className={`border-2 rounded-lg p-4 transition-colors ${
+                  currentLowStockItem
+                    ? 'bg-red-50 border-red-500'
+                    : 'bg-red-50 border-red-300 hover:border-red-400'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={!!currentLowStockItem}
+                    onChange={() => handleLowStockToggle()}
+                    className="h-4 w-4 text-red-600 focus:ring-red-500 border-red-400 rounded cursor-pointer accent-red-600"
+                  />
+                  <label
+                    className="text-sm font-semibold text-red-700 cursor-pointer"
+                    onClick={() => handleLowStockToggle()}
+                  >
+                    {currentLowStockItem ? 'Marked as low in stock ✓' : 'Low in stock'}
+                  </label>
+                </div>
+                <p className="text-xs text-red-500 mt-2">
+                  Tick this if the item is running low but not yet out of stock
+                </p>
+                {currentLowStockItem && (
+                  <div className="mt-2 flex items-center gap-1 text-xs text-red-600">
+                    <AlertTriangle className="h-3 w-3" />
+                    <span>Logged to Low stock items sheet — {currentLowStockItem.markedDate} at {currentLowStockItem.markedTime}</span>
+                  </div>
+                )}
+              </div>
+
               {order.itemName && (
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Item Name</h4>

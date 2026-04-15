@@ -60,6 +60,9 @@ export const OrderPickView: React.FC<OrderPickViewProps> = ({ savedOrderPickStat
     handleMarkForReorder,
     removeStockTrackingItem,
     clearAllStockTrackingItems,
+    lowStockItems,
+    handleMarkLowStock,
+    handleUnmarkLowStock,
     handleCustomerSearch,
     handleQRCodeScan,
     handleArrowNavigation,
@@ -292,6 +295,9 @@ export const OrderPickView: React.FC<OrderPickViewProps> = ({ savedOrderPickStat
                 onMarkForReorder={handleMarkForReorder}
                 stockTrackingItems={stockTrackingItems}
                 onUnmarkForReorder={removeStockTrackingItem}
+                lowStockItems={lowStockItems}
+                onMarkLowStock={handleMarkLowStock}
+                onUnmarkLowStock={handleUnmarkLowStock}
                 autoCompleteEnabled={autoCompleteEnabled}
                 packagingType={currentOrderPackagingType}
                currentOrderBoxName={currentOrderBoxName}

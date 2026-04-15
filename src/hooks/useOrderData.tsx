@@ -6,7 +6,7 @@ import { FileWithImages } from '../types/Settings';
 import { archiveService } from '../services/archiveService';
 import { CsvColumnMapping, defaultCsvColumnMapping, LocalImagesFolderInfo } from '../types/Csv';
 import { VoiceSettings, defaultVoiceSettings } from '../types/VoiceSettings';
-import { StockTrackingItem } from '../types/StockTracking';
+import { StockTrackingItem, LowStockItem } from '../types/StockTracking';
 import { CustomTag } from '../types/CustomTags';
 import { PackagingRule, defaultPackagingRules, defaultPackagingTypes, defaultBoxRules, defaultBoxNames } from '../types/Packaging';
 import { evaluatePackagingRules } from '../utils/packagingRules';
@@ -33,7 +33,8 @@ export const useOrderData = () => {
   const [csvColumnMappings, setCsvColumnMappings] = useState<CsvColumnMapping>(defaultCsvColumnMapping);
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(defaultVoiceSettings);
   const [stockTrackingItems, setStockTrackingItems] = useState<StockTrackingItem[]>([]);
-  
+  const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([]);
+
   // Custom tags state
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
   const [selectedSelroTag, setSelectedSelroTag] = useState<string>('all');
@@ -211,6 +212,18 @@ export const useOrderData = () => {
       } catch (e) {
         console.error('Failed to parse saved stock tracking items, using empty array:', e);
         setStockTrackingItems([]);
+      }
+    }
+
+    // Load saved low stock items
+    const savedLowStockItems = localStorage.getItem('lowStockItems');
+    if (savedLowStockItems) {
+      try {
+        const parsedLowStockItems = JSON.parse(savedLowStockItems);
+        setLowStockItems(parsedLowStockItems);
+      } catch (e) {
+        console.error('Failed to parse saved low stock items, using empty array:', e);
+        setLowStockItems([]);
       }
     }
 
@@ -835,25 +848,6 @@ export const useOrderData = () => {
           console.error(`❌ Error sending reorder info for row ${order.rowIndex}:`, error);
         }
       }
-
-      try {
-        console.log(`📤 Adding SKU ${order.sku} to Low stock items sheet`);
-        const lowStockResult = await webhookService.sendLowStockInfo(
-          'add',
-          order.sku,
-          order.remainingStock,
-          order.location,
-          order.orderNumber,
-          markedDate
-        );
-        if (lowStockResult.success) {
-          console.log(`✅ Added ${order.sku} to Low stock items sheet`);
-        } else {
-          console.warn(`⚠️ Failed to add ${order.sku} to Low stock items sheet: ${lowStockResult.message}`);
-        }
-      } catch (error) {
-        console.error(`❌ Error adding to Low stock items sheet for SKU ${order.sku}:`, error);
-      }
     } else {
       console.log('📦 useOrderData: Item already exists in stock tracking:', order.sku);
     }
@@ -885,27 +879,6 @@ export const useOrderData = () => {
         console.error(`❌ Error clearing reorder info for row ${itemToRemove.rowIndex}:`, error);
       }
     }
-
-    if (itemToRemove) {
-      try {
-        console.log(`📤 Removing SKU ${sku} from Low stock items sheet`);
-        const lowStockResult = await webhookService.sendLowStockInfo(
-          'remove',
-          sku,
-          itemToRemove.currentStock,
-          itemToRemove.location,
-          orderNumber,
-          markedDate
-        );
-        if (lowStockResult.success) {
-          console.log(`✅ Removed ${sku} from Low stock items sheet`);
-        } else {
-          console.warn(`⚠️ Failed to remove ${sku} from Low stock items sheet: ${lowStockResult.message}`);
-        }
-      } catch (error) {
-        console.error(`❌ Error removing from Low stock items sheet for SKU ${sku}:`, error);
-      }
-    }
   };
 
   // Clear all stock tracking items
@@ -913,6 +886,79 @@ export const useOrderData = () => {
     setStockTrackingItems([]);
     localStorage.removeItem('stockTrackingItems');
     console.log('📦 Cleared all stock tracking items');
+  };
+
+  const handleMarkLowStock = async (order: Order) => {
+    const existing = lowStockItems.find(
+      item => item.sku === order.sku && item.orderNumber === order.orderNumber
+    );
+    if (existing) return;
+
+    const now = new Date();
+    const markedDate = now.toLocaleDateString('en-GB');
+    const markedTime = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const newItem: LowStockItem = {
+      sku: order.sku,
+      orderNumber: order.orderNumber,
+      markedDate,
+      markedTime,
+      location: order.location,
+    };
+
+    const updatedItems = [...lowStockItems, newItem];
+    setLowStockItems(updatedItems);
+    localStorage.setItem('lowStockItems', JSON.stringify(updatedItems));
+
+    try {
+      const result = await webhookService.sendLowStockInfo(
+        'add',
+        order.sku,
+        order.location,
+        order.orderNumber,
+        markedDate,
+        markedTime
+      );
+      if (result.success) {
+        console.log(`✅ Added ${order.sku} to Low stock items sheet`);
+      } else {
+        console.warn(`⚠️ Failed to add ${order.sku} to Low stock items sheet: ${result.message}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error adding to Low stock items sheet for SKU ${order.sku}:`, error);
+    }
+  };
+
+  const handleUnmarkLowStock = async (sku: string, markedDate: string, orderNumber: string) => {
+    const itemToRemove = lowStockItems.find(
+      item => item.sku === sku && item.markedDate === markedDate && item.orderNumber === orderNumber
+    );
+
+    const updatedItems = lowStockItems.filter(
+      item => !(item.sku === sku && item.markedDate === markedDate && item.orderNumber === orderNumber)
+    );
+    setLowStockItems(updatedItems);
+    localStorage.setItem('lowStockItems', JSON.stringify(updatedItems));
+
+    if (itemToRemove) {
+      try {
+        const result = await webhookService.sendLowStockInfo(
+          'remove',
+          sku,
+          itemToRemove.location,
+          orderNumber,
+          markedDate,
+          itemToRemove.markedTime
+        );
+        if (result.success) {
+          console.log(`✅ Removed ${sku} from Low stock items sheet`);
+        } else {
+          console.warn(`⚠️ Failed to remove ${sku} from Low stock items sheet: ${result.message}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error removing from Low stock items sheet for SKU ${sku}:`, error);
+      }
+    }
   };
 
   // Normalize postcode for comparison (remove spaces and convert to uppercase)
@@ -1814,6 +1860,9 @@ export const useOrderData = () => {
     handleMarkForReorder,
     removeStockTrackingItem,
     clearAllStockTrackingItems,
+    lowStockItems,
+    handleMarkLowStock,
+    handleUnmarkLowStock,
     handleCustomerSearch,
     handleQRCodeScan,
     handleArrowNavigation,

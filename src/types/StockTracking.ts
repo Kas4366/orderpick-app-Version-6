@@ -15,3 +15,11 @@ export interface StockTrackingItem {
   rowIndex?: number;
   orderValue?: number;
 }
+
+export interface LowStockItem {
+  sku: string;
+  orderNumber: string;
+  markedDate: string;
+  markedTime: string;
+  location: string;
+}

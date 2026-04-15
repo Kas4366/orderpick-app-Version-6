@@ -16,10 +16,10 @@ interface ReorderInfoPayload {
 interface LowStockPayload {
   action: 'add' | 'remove';
   sku: string;
-  stockLevel: number;
   location: string;
   orderNumber: string;
   markedDate: string;
+  markedTime: string;
   secretKey?: string;
 }
 
@@ -217,10 +217,10 @@ export const webhookService = {
   async sendLowStockInfo(
     action: 'add' | 'remove',
     sku: string,
-    stockLevel: number,
     location: string,
     orderNumber: string,
-    markedDate: string
+    markedDate: string,
+    markedTime: string
   ): Promise<{ success: boolean; message?: string }> {
     try {
       const settings = await googleSheetsService.getSettings();
@@ -245,10 +245,10 @@ export const webhookService = {
       const payload: LowStockPayload = {
         action,
         sku,
-        stockLevel,
         location,
         orderNumber,
         markedDate,
+        markedTime,
       };
 
       if (settings.apps_script_secret_key) {
