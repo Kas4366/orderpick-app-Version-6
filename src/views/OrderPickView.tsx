@@ -272,6 +272,7 @@ export const OrderPickView: React.FC<OrderPickViewProps> = ({ savedOrderPickStat
                   onArrowNavigation={handleArrowNavigation}
                   searchMessage={searchMessage}
                   onClearMessage={() => setSearchMessage('')}
+                  isBlocked={isViewingOldOrder}
                 />
               </div>
             </div>

@@ -10,6 +10,7 @@ export interface ArchivedOrder {
   buyerPostcode?: string;
   remainingStock?: number;
   orderValue?: number;
+  rowIndex?: number;
   fileDate: string; // Required for archive - when the file was processed
   fileName: string; // Name of the source file
   archivedAt: string; // When it was archived

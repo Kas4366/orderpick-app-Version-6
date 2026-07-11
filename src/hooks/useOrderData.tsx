@@ -1017,6 +1017,12 @@ export const useOrderData = () => {
       return;
     }
 
+    // Block search when viewing an old order - packer must return to current orders first
+    if (isViewingOldOrder) {
+      console.log('🚫 Search blocked - viewing old order');
+      return;
+    }
+
     if (!searchTerm) return;
 
     setSearchMessage(''); // Clear previous message
@@ -1160,6 +1166,7 @@ export const useOrderData = () => {
                   buyerPostcode: archivedOrder.buyerPostcode,
                   remainingStock: archivedOrder.remainingStock,
                   orderValue: archivedOrder.orderValue,
+                  rowIndex: archivedOrder.rowIndex,
                   fileDate: archivedOrder.fileDate,
                   channelType: archivedOrder.channelType,
                   channel: archivedOrder.channel,
@@ -1211,6 +1218,12 @@ export const useOrderData = () => {
     // Block navigation if packing instruction modal is open
     if (isPackingInstructionModalOpen) {
       console.log('🚫 Navigation blocked - packing instruction modal is open');
+      return;
+    }
+
+    // Block navigation when viewing an old order
+    if (isViewingOldOrder) {
+      console.log('🚫 Navigation blocked - viewing old order');
       return;
     }
 
@@ -1409,6 +1422,7 @@ export const useOrderData = () => {
       buyerPostcode: archivedOrder.buyerPostcode,
       remainingStock: archivedOrder.remainingStock,
       orderValue: archivedOrder.orderValue,
+      rowIndex: archivedOrder.rowIndex,
       fileDate: archivedOrder.fileDate,
       channelType: archivedOrder.channelType,
       channel: archivedOrder.channel,
