@@ -64,7 +64,6 @@ export const OrderPickView: React.FC<OrderPickViewProps> = ({ savedOrderPickStat
     handleMarkLowStock,
     handleUnmarkLowStock,
     handleCustomerSearch,
-    handleQRCodeScan,
     handleArrowNavigation,
     handleOrderComplete,
     // Other settings
@@ -268,7 +267,6 @@ export const OrderPickView: React.FC<OrderPickViewProps> = ({ savedOrderPickStat
               <div className="mt-3">
                 <CustomerSearch
                   onCustomerSearch={(searchTerm) => handleCustomerSearch(searchTerm, currentSession?.employee.name)}
-                  onQRCodeScan={(qrData) => handleQRCodeScan(qrData, currentSession?.employee.name)}
                   onArrowNavigation={handleArrowNavigation}
                   searchMessage={searchMessage}
                   onClearMessage={() => setSearchMessage('')}

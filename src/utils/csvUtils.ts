@@ -415,6 +415,7 @@ export const parseCsvFile = async (
         notes: rawOrder.notes || '',
         completed: false,
         _sourceFileName: file.name,
+        rowIndex: rawOrder.originalIndex + 2, // +2 to match Google Sheets row numbering (1-based + header row)
       };
 
       finalOrders.push(order);

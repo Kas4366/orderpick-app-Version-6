@@ -3,7 +3,6 @@ import { Search, QrCode, ArrowUp, ArrowDown, Scan, Lock } from 'lucide-react';
 
 interface CustomerSearchProps {
   onCustomerSearch: (customerName: string) => void;
-  onQRCodeScan?: (qrData: string) => void;
   onArrowNavigation?: (direction: 'up' | 'down') => void;
   searchMessage?: string;
   onClearMessage?: () => void;
@@ -12,7 +11,6 @@ interface CustomerSearchProps {
 
 export const CustomerSearch: React.FC<CustomerSearchProps> = ({
   onCustomerSearch,
-  onQRCodeScan,
   onArrowNavigation,
   searchMessage,
   onClearMessage,
@@ -20,7 +18,6 @@ export const CustomerSearch: React.FC<CustomerSearchProps> = ({
 }) => {
   const [searchInput, setSearchInput] = useState('');
   const [searchMode, setSearchMode] = useState<'manual' | 'scanner' | 'arrows'>('manual');
-  const [lastScannedPostcode, setLastScannedPostcode] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -66,7 +63,6 @@ export const CustomerSearch: React.FC<CustomerSearchProps> = ({
     const extractedPostcode = extractPostcodeFromQRData(scannedData);
     if (extractedPostcode) {
       console.log('📮 Extracted postcode from QR scan:', extractedPostcode);
-      setLastScannedPostcode(extractedPostcode);
       onCustomerSearch(extractedPostcode);
     } else {
       console.log('🔍 No postcode found, searching with raw scanned data:', scannedData);
@@ -105,7 +101,6 @@ export const CustomerSearch: React.FC<CustomerSearchProps> = ({
     if (isBlocked) return;
     setSearchMode(newMode);
     setSearchInput('');
-    setLastScannedPostcode('');
     if (onClearMessage) onClearMessage();
   };
 

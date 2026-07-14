@@ -72,7 +72,6 @@ export const useOrderData = () => {
 
   // Other settings state
   const [autoCompleteEnabled, setAutoCompleteEnabled] = useState(false);
-  const [lastScannedData, setLastScannedData] = useState<string>('');
   const [searchMessage, setSearchMessage] = useState<string>('');
 
   // Image preview modal state
@@ -778,12 +777,12 @@ export const useOrderData = () => {
   };
 
   const handleMarkForReorder = async (order: Order) => {
-    if (order.remainingStock === undefined) return;
-    
-    console.log('📦 useOrderData: Marking item for reorder:', {
+    console.log('📦 useOrderData: handleMarkForReorder called:', {
       sku: order.sku,
       orderNumber: order.orderNumber,
       rowIndex: order.rowIndex,
+      hasRowIndex: !!order.rowIndex,
+      remainingStock: order.remainingStock,
       hasImageUrl: !!order.imageUrl,
       isLocalImage: order._isLocalImage,
       originalSkuForLocalImage: order._originalSkuForLocalImage,
@@ -798,7 +797,7 @@ export const useOrderData = () => {
       markedDate: markedDate,
       orderNumber: order.orderNumber,
       customerName: order.customerName,
-      currentStock: order.remainingStock,
+      currentStock: order.remainingStock ?? 0,
       location: order.location,
       imageUrl: order.imageUrl,
       rowIndex: order.rowIndex,
@@ -834,6 +833,7 @@ export const useOrderData = () => {
         hasLocalImageSource: !!newItem.localImageSource
       });
 
+      console.log(`📦 useOrderData: reorder webhook check - order.rowIndex = ${order.rowIndex}, hasRowIndex = ${!!order.rowIndex}`);
       if (order.rowIndex) {
         try {
           console.log(`📤 Sending reorder info to Google Sheets for row ${order.rowIndex}`);
@@ -847,9 +847,19 @@ export const useOrderData = () => {
         } catch (error) {
           console.error(`❌ Error sending reorder info for row ${order.rowIndex}:`, error);
         }
+      } else {
+        console.warn(`⚠️ useOrderData: Cannot send reorder webhook - order has no rowIndex. Order:`, {
+          sku: order.sku,
+          orderNumber: order.orderNumber,
+          customerName: order.customerName
+        });
       }
     } else {
-      console.log('📦 useOrderData: Item already exists in stock tracking:', order.sku);
+      console.log('📦 useOrderData: Item already exists in stock tracking, skipping webhook:', {
+        sku: order.sku,
+        orderNumber: order.orderNumber,
+        existingMarkedDate: existingItem.markedDate
+      });
     }
   };
 
@@ -967,48 +977,6 @@ export const useOrderData = () => {
   };
 
   // Handle QR code scanning - ENHANCED WITH ARCHIVE SEARCH
-  const handleQRCodeScan = (qrData: string, employeeName?: string) => {
-    // Block QR scanning if packing instruction modal is open
-    if (isPackingInstructionModalOpen) {
-      console.log('🚫 QR scan blocked - packing instruction modal is open');
-      return;
-    }
-
-    console.log('📱 Processing QR code scan:', qrData);
-
-    try {
-      // Extract postcodes from QR data
-      const postcodeRegex = /\b([A-Z]{1,2}[0-9][A-Z0-9]?\s?[0-9][A-Z]{2})\b/g;
-      const matches = qrData.match(postcodeRegex) || [];
-
-      // Known sender postcodes to filter out
-      const KNOWN_SENDER_POSTCODES = ['LU56RT', 'LU33RZ'];
-
-      const postcodes = matches
-        .map(match => normalizePostcode(match)) // Normalize postcodes
-        .filter(postcode =>
-          !KNOWN_SENDER_POSTCODES.some(sender =>
-            postcode.startsWith(sender) || sender.startsWith(postcode.substring(0, 4))
-          )
-        );
-
-      if (postcodes.length === 0) {
-        console.log('⚠️ No buyer postcodes found in QR data');
-        return;
-      }
-
-      // Use the first valid postcode for search
-      const postcodeToSearch = postcodes[0];
-      console.log('🔍 Using postcode for search:', postcodeToSearch);
-
-      // Let the customer search handle the actual order finding (which now includes archive search and auto-complete)
-      handleCustomerSearch(postcodeToSearch, employeeName);
-
-    } catch (error) {
-      console.error('Error processing QR code:', error);
-    }
-  };
-
   // Handle customer search - ENHANCED WITH ARCHIVE SEARCH
   const handleCustomerSearch = async (searchTerm: string, employeeName?: string) => {
     // Block search if packing instruction modal is open
@@ -1878,7 +1846,6 @@ export const useOrderData = () => {
     handleMarkLowStock,
     handleUnmarkLowStock,
     handleCustomerSearch,
-    handleQRCodeScan,
     handleArrowNavigation,
     handleSelroFolderSelect,
     selectedSelroFolderId,
