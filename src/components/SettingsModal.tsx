@@ -44,6 +44,9 @@ interface SettingsModalProps {
   // Other settings props
   autoCompleteEnabled?: boolean;
   onSaveOtherSettings?: (settings: { autoCompleteEnabled: boolean }) => void;
+  customDesignFolderHandle?: FileSystemDirectoryHandle | null;
+  customDesignFolderInfo?: LocalImagesFolderInfo | null;
+  onSetCustomDesignFolder?: () => void;
   // Box rules props
   boxRules?: PackagingRule[];
   onSaveBoxRules?: (rules: PackagingRule[]) => void;
@@ -79,6 +82,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSaveCustomPackagingTypes = () => {},
   autoCompleteEnabled = false,
   onSaveOtherSettings,
+  customDesignFolderHandle = null,
+  customDesignFolderInfo = null,
+  onSetCustomDesignFolder,
   boxRules = [],
   onSaveBoxRules = () => {},
   customBoxNames = [],
@@ -304,6 +310,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <OtherSettings
               autoCompleteEnabled={autoCompleteEnabled}
               onSaveSettings={onSaveOtherSettings || (() => {})}
+              customDesignFolderHandle={customDesignFolderHandle}
+              customDesignFolderInfo={customDesignFolderInfo}
+              onSetCustomDesignFolder={onSetCustomDesignFolder || (() => {})}
             />
           )}
         </div>

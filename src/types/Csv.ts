@@ -1,4 +1,4 @@
-export type CsvField = 'orderNumber' | 'customerFirstName' | 'customerLastName' | 'sku' | 'quantity' | 'location' | 'buyerPostcode' | 'imageUrl' | 'remainingStock' | 'orderValue' | 'channelType' | 'channel' | 'width' | 'weight' | 'itemName' | 'shipFromLocation' | 'packageDimension' | 'notes' | 'fileDate' | 'orderDate';
+export type CsvField = 'orderNumber' | 'customerFirstName' | 'customerLastName' | 'sku' | 'quantity' | 'location' | 'buyerPostcode' | 'imageUrl' | 'remainingStock' | 'orderValue' | 'channelType' | 'channel' | 'width' | 'weight' | 'itemName' | 'shipFromLocation' | 'packageDimension' | 'notes' | 'fileDate' | 'orderDate' | 'veeqoOrderId' | 'customMessage';
 
 export interface CsvColumnMapping {
   [key: string]: string; // Maps CsvField to the actual CSV column header
@@ -25,6 +25,8 @@ export const defaultCsvColumnMapping: CsvColumnMapping = {
   notes: 'Notes',
   fileDate: 'Downloaded Date',
   orderDate: 'created_at',
+  veeqoOrderId: 'Veeqo Order ID',
+  customMessage: 'Custom Message',
 };
 
 // Local images folder info

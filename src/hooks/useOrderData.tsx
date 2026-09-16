@@ -67,6 +67,10 @@ export const useOrderData = () => {
   const [csvImagesFolderHandle, setCsvImagesFolderHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [csvImagesFolderInfo, setCsvImagesFolderInfo] = useState<LocalImagesFolderInfo | null>(null);
 
+  // Custom design folder state
+  const [customDesignFolderHandle, setCustomDesignFolderHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const [customDesignFolderInfo, setCustomDesignFolderInfo] = useState<LocalImagesFolderInfo | null>(null);
+
   // Archive state
   const [isArchiveInitialized, setIsArchiveInitialized] = useState(false);
 
@@ -105,7 +109,6 @@ export const useOrderData = () => {
       if (savedHandle) {
         console.log(`🔍 useOrderData: Found saved handle for folder: ${savedHandle.name}`);
         
-        // Validate and request permission
         const hasPermission = await fileHandlePersistenceService.validateAndRequestPermission(savedHandle);
         
         console.log(`🔐 useOrderData: Permission validation result: ${hasPermission}`);
@@ -127,6 +130,35 @@ export const useOrderData = () => {
     }
   };
 
+  // Function to restore custom design folder handle from persistence
+  const restoreCustomDesignFolderHandle = async () => {
+    try {
+      console.log('🔄 useOrderData: Attempting to restore custom design folder handle...');
+      
+      const savedHandle = await fileHandlePersistenceService.getHandle('customDesignFolder');
+      
+      if (savedHandle) {
+        console.log(`🔍 useOrderData: Found saved handle for folder: ${savedHandle.name}`);
+        
+        const hasPermission = await fileHandlePersistenceService.validateAndRequestPermission(savedHandle);
+        
+        if (hasPermission) {
+          setCustomDesignFolderHandle(savedHandle);
+          console.log(`✅ useOrderData: Successfully restored access to custom design folder: ${savedHandle.name}`);
+        } else {
+          console.log('❌ useOrderData: Permission denied for saved custom design folder handle');
+          setCustomDesignFolderHandle(null);
+        }
+      } else {
+        console.log('⚠️ useOrderData: No saved custom design folder handle found in IndexedDB');
+        setCustomDesignFolderHandle(null);
+      }
+    } catch (error) {
+      console.error('❌ useOrderData: Error restoring custom design folder handle:', error);
+      setCustomDesignFolderHandle(null);
+    }
+  };
+
   // Initialize archive system on component mount
   useEffect(() => {
     const initializeArchive = async () => {
@@ -143,6 +175,8 @@ export const useOrderData = () => {
         // Always try to restore CSV images folder handle from IndexedDB
         console.log('🔄 useOrderData: Attempting to restore CSV images folder handle unconditionally...');
         await restoreCsvImagesFolderHandle();
+        // Also restore custom design folder handle
+        await restoreCustomDesignFolderHandle();
       } catch (error) {
         console.error('❌ Failed to initialize archive system:', error);
       }
@@ -319,6 +353,19 @@ export const useOrderData = () => {
       } catch (e) {
         console.error('Failed to parse saved CSV images folder info, using null:', e);
         setCsvImagesFolderInfo(null);
+      }
+    }
+
+    // Load saved custom design folder info
+    const savedCustomDesignFolderInfo = localStorage.getItem('customDesignFolderInfo');
+    if (savedCustomDesignFolderInfo) {
+      try {
+        const parsedCustomDesignFolderInfo = JSON.parse(savedCustomDesignFolderInfo);
+        console.log('🎨 Loaded saved custom design folder info from localStorage:', parsedCustomDesignFolderInfo);
+        setCustomDesignFolderInfo(parsedCustomDesignFolderInfo);
+      } catch (e) {
+        console.error('Failed to parse saved custom design folder info, using null:', e);
+        setCustomDesignFolderInfo(null);
       }
     }
 
@@ -608,22 +655,53 @@ export const useOrderData = () => {
       setCsvImagesFolderHandle(folderHandle);
       setCsvImagesFolderInfo(newFolderInfo);
 
-      // Save the handle for persistence
       try {
         await fileHandlePersistenceService.saveHandle('csvImagesFolder', folderHandle);
         console.log('💾 Saved folder handle for persistence');
       } catch (error) {
         console.error('⚠️ Failed to save folder handle for persistence:', error);
-        // Don't throw error - the folder selection still works, just won't persist
       }
 
-      // Save to localStorage
       localStorage.setItem('csvImagesFolderInfo', JSON.stringify(newFolderInfo));
-
       console.log(`✅ Successfully selected images folder: ${folderHandle.name}`);
     } catch (error) {
       if (error.name !== 'AbortError') {
         console.error('❌ Error selecting images folder:', error);
+        throw error;
+      }
+    }
+  };
+
+  // Custom Design Folder management
+  const setCustomDesignFolder = async () => {
+    try {
+      console.log('🎨 Selecting custom design folder...');
+      
+      const folderHandle = await window.showDirectoryPicker({
+        mode: 'read',
+        startIn: 'documents'
+      });
+      
+      const newFolderInfo: LocalImagesFolderInfo = {
+        folderName: folderHandle.name,
+        selectedAt: new Date().toISOString()
+      };
+
+      setCustomDesignFolderHandle(folderHandle);
+      setCustomDesignFolderInfo(newFolderInfo);
+
+      try {
+        await fileHandlePersistenceService.saveHandle('customDesignFolder', folderHandle);
+        console.log('💾 Saved custom design folder handle for persistence');
+      } catch (error) {
+        console.error('⚠️ Failed to save custom design folder handle for persistence:', error);
+      }
+
+      localStorage.setItem('customDesignFolderInfo', JSON.stringify(newFolderInfo));
+      console.log(`✅ Successfully selected custom design folder: ${folderHandle.name}`);
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        console.error('❌ Error selecting custom design folder:', error);
         throw error;
       }
     }
@@ -1869,6 +1947,10 @@ export const useOrderData = () => {
     csvImagesFolderHandle,
     csvImagesFolderInfo,
     setCsvImagesFolder,
+    // Custom Design Folder functionality
+    customDesignFolderHandle,
+    customDesignFolderInfo,
+    setCustomDesignFolder,
     // Archive functionality
     handleLoadArchivedOrder,
     isArchiveInitialized,

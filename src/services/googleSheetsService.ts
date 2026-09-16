@@ -206,6 +206,25 @@ export const googleSheetsService = {
       const itemName = extractValue('itemName');
       const notes = extractValue('notes');
 
+      // Extract Veeqo Order ID from column B (index 1) with mapping fallback
+      let veeqoOrderIdStr = '';
+      if (columnIndices['veeqoOrderId'] !== undefined) {
+        veeqoOrderIdStr = extractValue('veeqoOrderId');
+      }
+      if (!veeqoOrderIdStr && row.length > 1) {
+        veeqoOrderIdStr = row[1]?.toString().trim() || '';
+      }
+      const veeqoOrderId = veeqoOrderIdStr ? parseInt(veeqoOrderIdStr, 10) : undefined;
+
+      // Extract custom message from column AB (index 27) with mapping fallback
+      let customMessage = '';
+      if (columnIndices['customMessage'] !== undefined) {
+        customMessage = extractValue('customMessage');
+      }
+      if (!customMessage && row.length > 27) {
+        customMessage = row[27]?.toString().trim() || '';
+      }
+
       const customerName = `${customerFirstName} ${customerLastName}`.trim() || `Customer-${i + 1}`;
 
       if (!sku) {
@@ -248,6 +267,8 @@ export const googleSheetsService = {
         itemName: itemName || undefined,
         notes: notes || '',
         completed: false,
+        veeqoOrderId: !isNaN(veeqoOrderId as number) ? veeqoOrderId : undefined,
+        customMessage: customMessage || undefined,
       };
 
       orders.push(order);

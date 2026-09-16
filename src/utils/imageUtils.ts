@@ -51,3 +51,84 @@ export async function findImageFile(
   
   return '';
 }
+
+const designImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
+
+/**
+ * Recursively search a directory and all subdirectories for files matching a set of base names.
+ * Returns blob URLs for all matches found.
+ */
+async function findFilesRecursively(
+  dirHandle: FileSystemDirectoryHandle,
+  baseNames: string[]
+): Promise<string[]> {
+  const results: string[] = [];
+  const extensions = designImageExtensions;
+
+  const tryNames: string[] = [];
+  for (const base of baseNames) {
+    for (const ext of extensions) {
+      tryNames.push(`${base}.${ext}`);
+      tryNames.push(`${base}.${ext.toUpperCase()}`);
+    }
+  }
+
+  // Check files in current directory
+  for (const tryName of tryNames) {
+    try {
+      const fileHandle = await dirHandle.getFileHandle(tryName);
+      const file = await fileHandle.getFile();
+      results.push(URL.createObjectURL(file));
+      console.log(`✅ Found custom design file: "${tryName}" in "${dirHandle.name}"`);
+    } catch {
+      // not found, continue
+    }
+  }
+
+  // Recurse into subdirectories
+  for await (const entry of dirHandle.values()) {
+    if (entry.kind === 'directory') {
+      const subResults = await findFilesRecursively(entry as FileSystemDirectoryHandle, baseNames);
+      results.push(...subResults);
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Find custom design label image(s) for an order by Veeqo order ID.
+ * Searches the entire custom design folder recursively.
+ * Handles: single items (veeqoId), multi-items (veeqoId-N), cards (veeqoId-Inside, veeqoId-Front),
+ * and Amazon prefix (Amz-veeqoId).
+ * Returns array of blob URLs (0, 1, or multiple images).
+ */
+export async function findCustomDesignImages(
+  customDesignFolderHandle: FileSystemDirectoryHandle,
+  veeqoOrderId: string | number,
+  itemPosition?: number
+): Promise<string[]> {
+  if (!veeqoOrderId) return [];
+
+  const id = String(veeqoOrderId);
+  const baseNames: string[] = [id, `Amz-${id}`];
+
+  if (itemPosition && itemPosition > 0) {
+    baseNames.push(`${id}-${itemPosition}`, `Amz-${id}-${itemPosition}`);
+  }
+
+  // Card designs: Inside and Front
+  baseNames.push(`${id}-Inside`, `Amz-${id}-Inside`);
+  baseNames.push(`${id}-Front`, `Amz-${id}-Front`);
+
+  console.log(`🎨 Searching custom design folder for Veeqo ID: ${id}, base names:`, baseNames);
+
+  try {
+    const results = await findFilesRecursively(customDesignFolderHandle, baseNames);
+    console.log(`🎨 Custom design search complete for ${id}: found ${results.length} image(s)`);
+    return results;
+  } catch (error) {
+    console.error(`❌ Error searching custom design folder for ${id}:`, error);
+    return [];
+  }
+}

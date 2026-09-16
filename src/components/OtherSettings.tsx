@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, RotateCcw, CheckCircle, Download, Upload, AlertTriangle, FileText, Package, Trash2, RefreshCw, Sheet } from 'lucide-react';
+import { Settings, Save, RotateCcw, CheckCircle, Download, Upload, AlertTriangle, FileText, Package, Trash2, RefreshCw, Sheet, Image, FolderOpen } from 'lucide-react';
 import { archiveService } from '../services/archiveService';
 import { packingInstructionService } from '../services/packingInstructionService';
 import { googleSheetsService } from '../services/googleSheetsService';
@@ -8,11 +8,17 @@ import { PackingInstruction } from '../types/PackingInstructions';
 interface OtherSettingsProps {
   autoCompleteEnabled: boolean;
   onSaveSettings: (settings: { autoCompleteEnabled: boolean }) => void;
+  customDesignFolderHandle: FileSystemDirectoryHandle | null;
+  customDesignFolderInfo: { folderName: string; selectedAt: string } | null;
+  onSetCustomDesignFolder: () => void;
 }
 
 export const OtherSettings: React.FC<OtherSettingsProps> = ({
   autoCompleteEnabled,
   onSaveSettings,
+  customDesignFolderHandle,
+  customDesignFolderInfo,
+  onSetCustomDesignFolder,
 }) => {
   const [settings, setSettings] = useState({
     autoCompleteEnabled: autoCompleteEnabled
@@ -337,6 +343,47 @@ export const OtherSettings: React.FC<OtherSettingsProps> = ({
             <p className="text-xs text-blue-800 flex items-center gap-1">
               <CheckCircle className="h-3 w-3" />
               Auto-complete is enabled - orders will be marked as completed automatically
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Custom Design Files Folder */}
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+        <h4 className="text-md font-semibold text-emerald-800 mb-3 flex items-center gap-2">
+          <Image className="h-4 w-4" />
+          Custom Design Files Folder
+        </h4>
+        <p className="text-emerald-700 text-sm mb-4">
+          Select the main folder where custom design label files are saved. The app will search this folder (including all subfolders) for design files by Veeqo Order ID when an order is displayed. Files can be named as the Veeqo ID (e.g. 12345.jpg), with an Amz- prefix (e.g. Amz-12345.jpg), with item position suffix (e.g. 12345-1.jpg), or as card designs (e.g. 12345-Inside.jpg, 12345-Front.jpg).
+        </p>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onSetCustomDesignFolder}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+          >
+            <FolderOpen className="h-4 w-4" />
+            {customDesignFolderHandle ? 'Change Folder' : 'Select Folder'}
+          </button>
+          {customDesignFolderInfo && (
+            <div className="flex items-center gap-2 text-sm text-emerald-700">
+              <CheckCircle className="h-4 w-4" />
+              <span>
+                <strong>{customDesignFolderInfo.folderName}</strong>
+                <span className="text-emerald-600 ml-2">
+                  (selected {new Date(customDesignFolderInfo.selectedAt).toLocaleDateString('en-GB')})
+                </span>
+              </span>
+            </div>
+          )}
+        </div>
+
+        {!customDesignFolderHandle && (
+          <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
+            <p className="text-xs text-yellow-800 flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              No custom design folder selected. Only original SKU images will be shown.
             </p>
           </div>
         )}

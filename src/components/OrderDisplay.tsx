@@ -7,6 +7,7 @@ import { ReportProblemModal } from './ReportProblemModal';
 import { orderProblemsService } from '../services/orderProblemsService';
 import { useEmployee } from '../contexts/EmployeeContext';
 import { ProblemStatus } from '../types/OrderProblem';
+import { findCustomDesignImages } from '../utils/imageUtils';
 
 interface NextSkuNeeds {
   sku: string;
@@ -37,6 +38,7 @@ interface OrderDisplayProps {
   currentOrderBoxColor?: string | null;
   onPreviewImageBySku?: (sku: string) => void;
   onNavigateToOrderProblems?: () => void;
+  customDesignFolderHandle?: FileSystemDirectoryHandle | null;
 }
 
 export const OrderDisplay: React.FC<OrderDisplayProps> = ({
@@ -56,7 +58,8 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
   currentOrderBoxName,
   currentOrderBoxColor,
   onPreviewImageBySku,
-  onNavigateToOrderProblems
+  onNavigateToOrderProblems,
+  customDesignFolderHandle = null,
 }) => {
   const { currentSession } = useEmployee();
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -66,6 +69,8 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
   const [showNextSkuDetails, setShowNextSkuDetails] = useState(false);
   const [hasPlayedBeep, setHasPlayedBeep] = useState(false);
   const [isReportProblemModalOpen, setIsReportProblemModalOpen] = useState(false);
+  const [customDesignImages, setCustomDesignImages] = useState<string[]>([]);
+  const [customDesignLoading, setCustomDesignLoading] = useState(false);
   const speakTimeoutRef = useRef<number | null>(null);
   const checkboxRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -197,8 +202,33 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
     setIsCompleted(order.completed || false);
     setImageError(false);
     setImageLoading(true);
-    setHasPlayedBeep(false); // Reset beep flag when order changes
+    setHasPlayedBeep(false);
+    setCustomDesignImages([]);
   }, [order]);
+
+  // Lookup custom design images when order changes
+  useEffect(() => {
+    const lookupCustomDesigns = async () => {
+      if (!customDesignFolderHandle || !order.veeqoOrderId) {
+        setCustomDesignImages([]);
+        return;
+      }
+
+      setCustomDesignLoading(true);
+      try {
+        const itemPosition = isGroupedOrder ? groupedOrderItems.indexOf(order) + 1 : undefined;
+        const images = await findCustomDesignImages(customDesignFolderHandle, order.veeqoOrderId, itemPosition);
+        setCustomDesignImages(images);
+      } catch (error) {
+        console.error('❌ Error looking up custom design images:', error);
+        setCustomDesignImages([]);
+      } finally {
+        setCustomDesignLoading(false);
+      }
+    };
+
+    lookupCustomDesigns();
+  }, [order, customDesignFolderHandle, isGroupedOrder, groupedOrderItems]);
 
   // Play beep when "PICK EXTRA" message appears
   useEffect(() => {
@@ -728,6 +758,18 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
                 </span>
               </div>
             )}
+
+            {order.customMessage && (
+              <div className="mt-2 p-2 bg-amber-50 border border-amber-300 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold text-amber-800 mb-1">Custom Message from Channel:</p>
+                    <p className="text-sm text-amber-900 whitespace-pre-wrap">{order.customMessage}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="flex items-center gap-2">
@@ -1000,42 +1042,104 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
         ) : (
           /* Single item display - IMPROVED LAYOUT */
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Image Section - Takes up more space */}
+            {/* Image Section - Custom design (large) + Original SKU (small) */}
             <div className="lg:col-span-2">
-              <div className="w-full bg-gray-100 rounded-lg overflow-hidden relative flex items-center justify-center" style={{ height: '500px' }}>
-                {order.imageUrl && !imageError ? (
-                  <>
-                    {imageLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              {customDesignImages.length > 0 ? (
+                <div className="flex gap-3 h-full">
+                  {/* Custom Design Images - Larger */}
+                  <div className="flex-1 bg-emerald-50 rounded-lg overflow-hidden relative flex items-center justify-center border-2 border-emerald-300" style={{ minHeight: '500px' }}>
+                    <div className="absolute top-2 left-2 bg-emerald-600 text-white text-xs font-bold px-2 py-1 rounded z-10">
+                      Custom Design
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-2 p-2">
+                      {customDesignImages.map((imgUrl, idx) => (
+                        <img
+                          key={idx}
+                          src={imgUrl}
+                          alt={`Custom design ${idx + 1} for Veeqo ID ${order.veeqoOrderId}`}
+                          className="max-w-full max-h-[480px] object-contain"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  {/* Original SKU Image - Smaller */}
+                  <div className="w-1/3 bg-gray-100 rounded-lg overflow-hidden relative flex items-center justify-center border border-gray-300" style={{ minHeight: '500px' }}>
+                    <div className="absolute top-2 left-2 bg-gray-700 text-white text-xs font-bold px-2 py-1 rounded z-10">
+                      Original SKU
+                    </div>
+                    {order.imageUrl && !imageError ? (
+                      <>
+                        {imageLoading && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                          </div>
+                        )}
+                        <img
+                          ref={imageRef}
+                          src={order.imageUrl}
+                          alt={`Product image for ${order.sku}`}
+                          className={`w-full h-full object-contain transition-opacity duration-300 ${
+                            imageLoading ? 'opacity-0' : 'opacity-100'
+                          }`}
+                          onLoad={handleImageLoad}
+                          onError={handleImageError}
+                        />
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-gray-400 p-4">
+                        <Box className="h-12 w-12 mb-2" />
+                        <p className="text-xs text-center font-medium">
+                          No original image
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1 text-center">
+                          SKU: {order.sku}
+                        </p>
                       </div>
                     )}
-                    <img 
-                      ref={imageRef}
-                      src={order.imageUrl} 
-                      alt={`Product image for ${order.sku}`}
-                      className={`w-full h-full object-contain transition-opacity duration-300 ${
-                        imageLoading ? 'opacity-0' : 'opacity-100'
-                      }`}
-                      onLoad={handleImageLoad}
-                      onError={handleImageError}
-                    />
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center justify-center text-gray-400 p-8">
-                    <Box className="h-20 w-20 mb-2" />
-                    <p className="text-sm text-center px-4 font-medium">
-                      Image not available in folder
-                    </p>
-                    <p className="text-xs text-gray-500 mt-2 px-4 text-center">
-                      SKU: {order.sku}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-3 px-4 text-center">
-                      Save image as "{order.sku}.jpg" in images folder
-                    </p>
                   </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="w-full bg-gray-100 rounded-lg overflow-hidden relative flex items-center justify-center" style={{ height: '500px' }}>
+                  {customDesignLoading && (
+                    <div className="absolute top-2 right-2 flex items-center gap-1 text-xs text-gray-500 bg-white bg-opacity-80 px-2 py-1 rounded z-10">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-emerald-600"></div>
+                      <span>Searching designs...</span>
+                    </div>
+                  )}
+                  {order.imageUrl && !imageError ? (
+                    <>
+                      {imageLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </div>
+                      )}
+                      <img
+                        ref={imageRef}
+                        src={order.imageUrl}
+                        alt={`Product image for ${order.sku}`}
+                        className={`w-full h-full object-contain transition-opacity duration-300 ${
+                          imageLoading ? 'opacity-0' : 'opacity-100'
+                        }`}
+                        onLoad={handleImageLoad}
+                        onError={handleImageError}
+                      />
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-gray-400 p-8">
+                      <Box className="h-20 w-20 mb-2" />
+                      <p className="text-sm text-center px-4 font-medium">
+                        Image not available in folder
+                      </p>
+                      <p className="text-xs text-gray-500 mt-2 px-4 text-center">
+                        SKU: {order.sku}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-3 px-4 text-center">
+                        Save image as "{order.sku}.jpg" in images folder
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             
             {/* Details Section - Compact but complete */}

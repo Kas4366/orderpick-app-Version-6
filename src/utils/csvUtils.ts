@@ -162,6 +162,8 @@ export const parseCsvFile = async (
     const itemName = extractValue('itemName');
     const shipFromLocation = extractValue('shipFromLocation');
     const notes = extractValue('notes');
+    const veeqoOrderIdStr = extractValue('veeqoOrderId');
+    const customMessage = extractValue('customMessage');
 
     console.log(`🔍 Row ${rowNumber} extracted values:`, {
       orderNumber,
@@ -298,6 +300,8 @@ export const parseCsvFile = async (
       shipFromLocation: shipFromLocation,
       originalIndex: i, // Store original CSV row index
       notes: notes || '',
+      veeqoOrderId: veeqoOrderIdStr ? parseInt(veeqoOrderIdStr, 10) : undefined,
+      customMessage: customMessage || '',
     });
 
     console.log(`✅ Row ${rowNumber}: Successfully processed order:`, {
@@ -415,7 +419,9 @@ export const parseCsvFile = async (
         notes: rawOrder.notes || '',
         completed: false,
         _sourceFileName: file.name,
-        rowIndex: rawOrder.originalIndex + 2, // +2 to match Google Sheets row numbering (1-based + header row)
+        rowIndex: rawOrder.originalIndex + 2,
+        veeqoOrderId: rawOrder.veeqoOrderId,
+        customMessage: rawOrder.customMessage || undefined,
       };
 
       finalOrders.push(order);

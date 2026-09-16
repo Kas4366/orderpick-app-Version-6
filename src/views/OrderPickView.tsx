@@ -97,6 +97,10 @@ export const OrderPickView: React.FC<OrderPickViewProps> = ({ savedOrderPickStat
     csvImagesFolderInfo,
     setCsvImagesFolder,
     csvImagesFolderHandle,
+    // Custom Design Folder
+    customDesignFolderHandle,
+    customDesignFolderInfo,
+    setCustomDesignFolder,
     // Archive
     handleLoadArchivedOrder,
     isArchiveInitialized,
@@ -303,6 +307,7 @@ export const OrderPickView: React.FC<OrderPickViewProps> = ({ savedOrderPickStat
                 currentOrderBoxColor={currentOrderBoxColor}
                 onPreviewImageBySku={handlePreviewImageBySku}
                 onNavigateToOrderProblems={onNavigateToOrderProblems ? () => onNavigateToOrderProblems({ currentOrderIndex, orders, filters }) : undefined}
+                customDesignFolderHandle={customDesignFolderHandle}
               />
             ) : (
               <NoOrdersState 
@@ -345,6 +350,9 @@ export const OrderPickView: React.FC<OrderPickViewProps> = ({ savedOrderPickStat
         onSaveBoxNames={saveCustomBoxNames}
         autoCompleteEnabled={autoCompleteEnabled}
         onSaveOtherSettings={saveOtherSettings}
+        customDesignFolderHandle={customDesignFolderHandle}
+        customDesignFolderInfo={customDesignFolderInfo}
+        onSetCustomDesignFolder={setCustomDesignFolder}
         onLoadOrdersFromGoogleSheets={async (selectedDate: string) => {
           await loadOrdersFromGoogleSheets(selectedDate);
           setIsSettingsOpen(false);

@@ -37,6 +37,8 @@ export interface Order {
   // Veeqo API IDs
   veeqoOrderId?: number;
   veeqoItemId?: number;
+  // Custom message from channel (column AB in Google Sheets)
+  customMessage?: string;
   // Packaging metadata
   width?: number;
   weight?: number;
