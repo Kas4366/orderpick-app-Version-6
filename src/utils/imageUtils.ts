@@ -52,18 +52,23 @@ export async function findImageFile(
   return '';
 }
 
-const designImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
+const designFileExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'pdf'];
+
+export interface CustomDesignFile {
+  url: string;
+  isPdf: boolean;
+}
 
 /**
  * Recursively search a directory and all subdirectories for files matching a set of base names.
- * Returns blob URLs for all matches found.
+ * Returns typed results with blob URLs and PDF flag.
  */
 async function findFilesRecursively(
   dirHandle: FileSystemDirectoryHandle,
   baseNames: string[]
-): Promise<string[]> {
-  const results: string[] = [];
-  const extensions = designImageExtensions;
+): Promise<CustomDesignFile[]> {
+  const results: CustomDesignFile[] = [];
+  const extensions = designFileExtensions;
 
   const tryNames: string[] = [];
   for (const base of baseNames) {
@@ -78,8 +83,9 @@ async function findFilesRecursively(
     try {
       const fileHandle = await dirHandle.getFileHandle(tryName);
       const file = await fileHandle.getFile();
-      results.push(URL.createObjectURL(file));
-      console.log(`✅ Found custom design file: "${tryName}" in "${dirHandle.name}"`);
+      const isPdf = tryName.toLowerCase().endsWith('.pdf');
+      results.push({ url: URL.createObjectURL(file), isPdf });
+      console.log(`✅ Found custom design file: "${tryName}" in "${dirHandle.name}" (PDF: ${isPdf})`);
     } catch {
       // not found, continue
     }
@@ -97,17 +103,18 @@ async function findFilesRecursively(
 }
 
 /**
- * Find custom design label image(s) for an order by Veeqo order ID.
+ * Find custom design label file(s) for an order by Veeqo order ID.
  * Searches the entire custom design folder recursively.
  * Handles: single items (veeqoId), multi-items (veeqoId-N), cards (veeqoId-Inside, veeqoId-Front),
  * and Amazon prefix (Amz-veeqoId).
- * Returns array of blob URLs (0, 1, or multiple images).
+ * Supports both image files (jpg, png, etc.) and PDF files.
+ * Returns array of typed results (0, 1, or multiple files).
  */
 export async function findCustomDesignImages(
   customDesignFolderHandle: FileSystemDirectoryHandle,
   veeqoOrderId: string | number,
   itemPosition?: number
-): Promise<string[]> {
+): Promise<CustomDesignFile[]> {
   if (!veeqoOrderId) return [];
 
   const id = String(veeqoOrderId);
@@ -125,7 +132,7 @@ export async function findCustomDesignImages(
 
   try {
     const results = await findFilesRecursively(customDesignFolderHandle, baseNames);
-    console.log(`🎨 Custom design search complete for ${id}: found ${results.length} image(s)`);
+    console.log(`🎨 Custom design search complete for ${id}: found ${results.length} file(s)`);
     return results;
   } catch (error) {
     console.error(`❌ Error searching custom design folder for ${id}:`, error);

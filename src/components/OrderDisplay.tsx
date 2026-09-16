@@ -7,7 +7,7 @@ import { ReportProblemModal } from './ReportProblemModal';
 import { orderProblemsService } from '../services/orderProblemsService';
 import { useEmployee } from '../contexts/EmployeeContext';
 import { ProblemStatus } from '../types/OrderProblem';
-import { findCustomDesignImages } from '../utils/imageUtils';
+import { findCustomDesignImages, CustomDesignFile } from '../utils/imageUtils';
 
 interface NextSkuNeeds {
   sku: string;
@@ -69,7 +69,7 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
   const [showNextSkuDetails, setShowNextSkuDetails] = useState(false);
   const [hasPlayedBeep, setHasPlayedBeep] = useState(false);
   const [isReportProblemModalOpen, setIsReportProblemModalOpen] = useState(false);
-  const [customDesignImages, setCustomDesignImages] = useState<string[]>([]);
+  const [customDesignImages, setCustomDesignImages] = useState<CustomDesignFile[]>([]);
   const [customDesignLoading, setCustomDesignLoading] = useState(false);
   const speakTimeoutRef = useRef<number | null>(null);
   const checkboxRef = useRef<HTMLInputElement>(null);
@@ -1052,13 +1052,32 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
                       Custom Design
                     </div>
                     <div className="flex flex-wrap items-center justify-center gap-2 p-2">
-                      {customDesignImages.map((imgUrl, idx) => (
-                        <img
-                          key={idx}
-                          src={imgUrl}
-                          alt={`Custom design ${idx + 1} for Veeqo ID ${order.veeqoOrderId}`}
-                          className="max-w-full max-h-[480px] object-contain"
-                        />
+                      {customDesignImages.map((designFile, idx) => (
+                        designFile.isPdf ? (
+                          <div key={idx} className="flex flex-col items-center gap-1">
+                            <embed
+                              src={designFile.url}
+                              type="application/pdf"
+                              className="max-w-full max-h-[460px] rounded border border-emerald-200"
+                              style={{ width: '400px', minHeight: '300px' }}
+                            />
+                            <a
+                              href={designFile.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-emerald-700 hover:text-emerald-900 underline"
+                            >
+                              Open PDF in new tab
+                            </a>
+                          </div>
+                        ) : (
+                          <img
+                            key={idx}
+                            src={designFile.url}
+                            alt={`Custom design ${idx + 1} for Veeqo ID ${order.veeqoOrderId}`}
+                            className="max-w-full max-h-[480px] object-contain"
+                          />
+                        )
                       ))}
                     </div>
                   </div>
