@@ -111,21 +111,21 @@ export const GroupedOrderItemCard: React.FC<GroupedOrderItemCardProps> = ({
         {/* Image section */}
         <div className="md:col-span-1">
           {customDesigns.length > 0 ? (
-            <div className="flex gap-2" style={{ height: '400px' }}>
-              {/* Custom Design - fills available space */}
-              <div className="flex-1 bg-emerald-50 rounded-lg overflow-hidden relative flex items-center justify-center border-2 border-emerald-300">
+            <div className="space-y-2">
+              {/* Custom Design Images */}
+              <div className="bg-emerald-50 rounded-lg overflow-hidden relative border-2 border-emerald-300" style={{ minHeight: '200px' }}>
                 <div className="absolute top-1 left-1 bg-emerald-600 text-white text-xs font-bold px-2 py-1 rounded z-10">
                   Custom Design
                 </div>
-                <div className="flex flex-wrap items-center justify-center gap-2 p-2 w-full h-full">
+                <div className="flex flex-wrap items-center justify-center gap-2 p-2">
                   {customDesigns.map((designFile, idx) => (
                     designFile.isPdf ? (
-                      <div key={idx} className="flex flex-col items-center gap-1 h-full justify-center">
+                      <div key={idx} className="flex flex-col items-center gap-1">
                         <embed
                           src={designFile.url}
                           type="application/pdf"
-                          className="rounded border border-emerald-200"
-                          style={{ width: '100%', maxWidth: '500px', height: '100%', maxHeight: '360px' }}
+                          className="max-w-full max-h-[180px] rounded border border-emerald-200"
+                          style={{ width: '200px', minHeight: '150px' }}
                         />
                         <a
                           href={designFile.url}
@@ -141,17 +141,16 @@ export const GroupedOrderItemCard: React.FC<GroupedOrderItemCardProps> = ({
                         key={idx}
                         src={designFile.url}
                         alt={`Custom design ${idx + 1} for ${item.sku}`}
-                        className="max-w-full object-contain"
-                        style={{ maxHeight: '360px' }}
+                        className="max-w-full max-h-[180px] object-contain"
                       />
                     )
                   ))}
                 </div>
               </div>
-              {/* Original SKU Image - compact sidebar */}
-              <div className="w-20 bg-gray-100 rounded-lg overflow-hidden relative flex items-center justify-center border border-gray-300 flex-shrink-0">
+              {/* Original SKU Image */}
+              <div className="bg-gray-100 rounded-lg overflow-hidden relative flex items-center justify-center border border-gray-300" style={{ height: '100px' }}>
                 <div className="absolute top-1 left-1 bg-gray-700 text-white text-xs font-bold px-1 py-0.5 rounded z-10">
-                  Orig
+                  Original
                 </div>
                 {item.imageUrl && !imageError ? (
                   <img
@@ -162,8 +161,8 @@ export const GroupedOrderItemCard: React.FC<GroupedOrderItemCardProps> = ({
                     onError={handleImageError}
                   />
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-gray-400 p-1">
-                    <Box className="h-6 w-6 mb-1" />
+                  <div className="flex flex-col items-center justify-center text-gray-400 p-2">
+                    <Box className="h-8 w-8 mb-1" />
                     <p className="text-xs text-center">SKU: {item.sku}</p>
                   </div>
                 )}

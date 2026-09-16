@@ -874,21 +874,21 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
             {/* Image Section - Custom design (large) + Original SKU (small) */}
             <div className="lg:col-span-2">
               {customDesignImages.length > 0 ? (
-                <div className="flex gap-3" style={{ height: '70vh', minHeight: '500px' }}>
-                  {/* Custom Design - fills all available space */}
-                  <div className="flex-1 bg-emerald-50 rounded-lg overflow-hidden relative flex items-center justify-center border-2 border-emerald-300">
+                <div className="flex gap-3 h-full">
+                  {/* Custom Design Images - Larger */}
+                  <div className="flex-1 bg-emerald-50 rounded-lg overflow-hidden relative flex items-center justify-center border-2 border-emerald-300" style={{ minHeight: '500px' }}>
                     <div className="absolute top-2 left-2 bg-emerald-600 text-white text-xs font-bold px-2 py-1 rounded z-10">
                       Custom Design
                     </div>
-                    <div className="flex flex-wrap items-center justify-center gap-3 p-3 w-full h-full">
+                    <div className="flex flex-wrap items-center justify-center gap-2 p-2">
                       {customDesignImages.map((designFile, idx) => (
                         designFile.isPdf ? (
-                          <div key={idx} className="flex flex-col items-center gap-1 h-full justify-center">
+                          <div key={idx} className="flex flex-col items-center gap-1">
                             <embed
                               src={designFile.url}
                               type="application/pdf"
-                              className="rounded border border-emerald-200"
-                              style={{ width: '100%', maxWidth: '700px', height: '100%', maxHeight: 'calc(70vh - 40px)' }}
+                              className="max-w-full max-h-[460px] rounded border border-emerald-200"
+                              style={{ width: '400px', minHeight: '300px' }}
                             />
                             <a
                               href={designFile.url}
@@ -904,23 +904,22 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
                             key={idx}
                             src={designFile.url}
                             alt={`Custom design ${idx + 1} for Veeqo ID ${order.veeqoOrderId}`}
-                            className="max-w-full object-contain"
-                            style={{ maxHeight: 'calc(70vh - 40px)' }}
+                            className="max-w-full max-h-[480px] object-contain"
                           />
                         )
                       ))}
                     </div>
                   </div>
-                  {/* Original SKU Image - compact sidebar */}
-                  <div className="w-32 bg-gray-100 rounded-lg overflow-hidden relative flex items-center justify-center border border-gray-300 flex-shrink-0">
-                    <div className="absolute top-1 left-1 bg-gray-700 text-white text-xs font-bold px-1.5 py-0.5 rounded z-10">
-                      Original
+                  {/* Original SKU Image - Smaller */}
+                  <div className="w-1/3 bg-gray-100 rounded-lg overflow-hidden relative flex items-center justify-center border border-gray-300" style={{ minHeight: '500px' }}>
+                    <div className="absolute top-2 left-2 bg-gray-700 text-white text-xs font-bold px-2 py-1 rounded z-10">
+                      Original SKU
                     </div>
                     {order.imageUrl && !imageError ? (
                       <>
                         {imageLoading && (
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                           </div>
                         )}
                         <img
@@ -935,9 +934,14 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
                         />
                       </>
                     ) : (
-                      <div className="flex flex-col items-center justify-center text-gray-400 p-2">
-                        <Box className="h-8 w-8 mb-1" />
-                        <p className="text-xs text-center">SKU: {order.sku}</p>
+                      <div className="flex flex-col items-center justify-center text-gray-400 p-4">
+                        <Box className="h-12 w-12 mb-2" />
+                        <p className="text-xs text-center font-medium">
+                          No original image
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1 text-center">
+                          SKU: {order.sku}
+                        </p>
                       </div>
                     )}
                   </div>
