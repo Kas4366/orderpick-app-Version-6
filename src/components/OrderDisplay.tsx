@@ -8,6 +8,8 @@ import { orderProblemsService } from '../services/orderProblemsService';
 import { useEmployee } from '../contexts/EmployeeContext';
 import { ProblemStatus } from '../types/OrderProblem';
 import { findCustomDesignImages, CustomDesignFile } from '../utils/imageUtils';
+import { GroupedOrderItemCard } from './GroupedOrderItemCard';
+
 
 interface NextSkuNeeds {
   sku: string;
@@ -217,7 +219,7 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
       setCustomDesignLoading(true);
       try {
         const itemPosition = isGroupedOrder ? groupedOrderItems.indexOf(order) + 1 : undefined;
-        const images = await findCustomDesignImages(customDesignFolderHandle, order.veeqoOrderId, itemPosition);
+        const images = await findCustomDesignImages(customDesignFolderHandle, order.veeqoOrderId, itemPosition, order.quantity);
         setCustomDesignImages(images);
       } catch (error) {
         console.error('❌ Error looking up custom design images:', error);
@@ -850,194 +852,21 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
               </div>
             )}
 
-            {groupedOrderItems.map((item, index) => {
-              const itemTracked = getTrackedItem(item.sku, item.orderNumber);
-              const itemLowStock = lowStockItems.find(
-                ls => ls.sku === item.sku && ls.orderNumber === item.orderNumber
-              );
-              return (
-              <div key={`${item.sku}-${item.orderNumber}-${index}`} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Image */}
-                  <div className="md:col-span-1">
-                    <div className="w-full bg-gray-100 rounded-lg overflow-hidden relative flex items-center justify-center" style={{ height: '250px' }}>
-                      {item.imageUrl && !imageError ? (
-                        <>
-                          {imageLoading && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                            </div>
-                          )}
-                          <img 
-                            src={item.imageUrl} 
-                            alt={`Product image for ${item.sku}`}
-                            className={`w-full h-full object-contain transition-opacity duration-300 ${
-                              imageLoading ? 'opacity-0' : 'opacity-100'
-                            }`}
-                            onLoad={handleImageLoad}
-                            onError={handleImageError}
-                          />
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center text-gray-400 p-4">
-                          <Box className="h-16 w-16 mb-2" />
-                          <p className="text-sm text-center font-medium">
-                            Image not available in folder
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1 text-center">
-                            SKU: {item.sku}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-2 text-center">
-                            Save image as "{item.sku}.jpg" in images folder
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Item Details */}
-                  <div className="md:col-span-2 space-y-4">
-                    <div className="bg-blue-50 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Package className="h-5 w-5 text-blue-600" />
-                        <h4 className="text-sm font-medium text-blue-800">Item {index + 1} Details</h4>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <h5 className="text-xs font-medium text-blue-700 mb-1">SKU</h5>
-                          <div className="flex items-center gap-2">
-                            <p className="text-lg font-bold text-blue-900">{item.sku}</p>
-                            {onPreviewImageBySku && (
-                              <button
-                                onClick={() => onPreviewImageBySku(item.sku)}
-                                className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
-                                title={`Preview image for ${item.sku}`}
-                              >
-                                <Image className="h-4 w-4" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h5 className="text-xs font-medium text-blue-700 mb-1">Quantity</h5>
-                          <p className={`text-4xl font-black text-red-600 ${item.quantity > 1 ? 'animate-pulse' : ''}`}>
-                            {item.quantity}
-                          </p>
-                        </div>
-
-                        <div>
-                          <h5 className="text-xs font-medium text-blue-700 mb-1">Location</h5>
-                          <div className="inline-block bg-green-200 text-green-900 px-3 py-1 rounded-lg text-lg font-bold">
-                            {item.location}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Order Value */}
-                      {item.orderValue !== undefined && (
-                        <div className="mt-4">
-                          <h5 className="text-xs font-medium text-blue-700 mb-1">Order Value</h5>
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-green-600" />
-                            <p className="text-lg font-bold text-green-900">
-                              {formatCurrency(item.orderValue)}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Stock Information */}
-                      {item.remainingStock !== undefined && (
-                        <div className="mt-4">
-                          <h5 className="text-xs font-medium text-blue-700 mb-1">Stock Info</h5>
-                          <div className="space-y-1">
-                            <p className="text-sm text-blue-900">
-                              <span className="font-medium">Available:</span> {item.remainingStock}
-                            </p>
-                            {stockStatus && (
-                              <div className={`p-2 rounded ${stockStatus.bgColor}`}>
-                                <p className={`text-xs font-medium ${stockStatus.color}`}>
-                                  {stockStatus.message}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {item.itemName && (
-                        <div className="mt-4">
-                          <h5 className="text-xs font-medium text-blue-700 mb-1">Product Details</h5>
-                          <p className="text-sm text-blue-900">{item.itemName}</p>
-                        </div>
-                      )}
-
-                      <div className="mt-4 space-y-2">
-                        <div className="bg-white border border-gray-200 rounded-lg p-3">
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={!!itemTracked}
-                              onChange={() => handleCheckboxToggle(item)}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
-                            />
-                            <label
-                              className="text-sm font-medium text-gray-800 cursor-pointer"
-                              onClick={() => handleCheckboxToggle(item)}
-                            >
-                              {itemTracked ? 'Marked for reorder ✓' : 'Mark for reorder'}
-                            </label>
-                          </div>
-                          {itemTracked && (
-                            <div className="mt-2 flex items-center gap-1 text-xs text-green-600">
-                              <CheckCircle className="h-3 w-3" />
-                              <span>Added to reorder list</span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div
-                          className={`border-2 rounded-lg p-3 transition-colors ${
-                            itemLowStock
-                              ? 'bg-red-50 border-red-500'
-                              : 'bg-red-50 border-red-300 hover:border-red-400'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={!!itemLowStock}
-                              onChange={() => itemLowStock
-                                ? onUnmarkLowStock(itemLowStock.sku, itemLowStock.markedDate, itemLowStock.orderNumber)
-                                : onMarkLowStock(item)
-                              }
-                              className="h-4 w-4 text-red-600 focus:ring-red-500 border-red-400 rounded cursor-pointer accent-red-600"
-                            />
-                            <label
-                              className="text-sm font-semibold text-red-700 cursor-pointer"
-                              onClick={() => itemLowStock
-                                ? onUnmarkLowStock(itemLowStock.sku, itemLowStock.markedDate, itemLowStock.orderNumber)
-                                : onMarkLowStock(item)
-                              }
-                            >
-                              {itemLowStock ? 'Marked as low in stock ✓' : 'Low in stock'}
-                            </label>
-                          </div>
-                          {itemLowStock && (
-                            <div className="mt-2 flex items-center gap-1 text-xs text-red-600">
-                              <AlertTriangle className="h-3 w-3" />
-                              <span>{itemLowStock.markedDate} at {itemLowStock.markedTime}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )})}
+            {groupedOrderItems.map((item, index) => (
+              <GroupedOrderItemCard
+                key={`${item.sku}-${item.orderNumber}-${index}`}
+                item={item}
+                index={index}
+                customDesignFolderHandle={customDesignFolderHandle}
+                stockTrackingItems={stockTrackingItems}
+                lowStockItems={lowStockItems}
+                onMarkForReorder={onMarkForReorder}
+                onUnmarkForReorder={onUnmarkForReorder}
+                onMarkLowStock={onMarkLowStock}
+                onUnmarkLowStock={onUnmarkLowStock}
+                onPreviewImageBySku={onPreviewImageBySku}
+              />
+            ))}
           </div>
         ) : (
           /* Single item display - IMPROVED LAYOUT */
