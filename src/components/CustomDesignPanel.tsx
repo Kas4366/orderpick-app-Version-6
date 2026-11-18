@@ -76,7 +76,7 @@ export const CustomDesignPanel: React.FC<CustomDesignPanelProps> = ({
                 src={file.url}
                 type="application/pdf"
                 className="max-w-full max-h-[460px] rounded border border-emerald-200"
-                style={{ width: '400px', minHeight: '300px' }}
+                style={{ width: '400px', minHeight: '700px' }}
               />
               <a
                 href={file.url}
@@ -92,7 +92,7 @@ export const CustomDesignPanel: React.FC<CustomDesignPanelProps> = ({
               key={idx}
               src={file.url}
               alt={`Custom design ${idx + 1} for Veeqo ID ${veeqoOrderId}`}
-              className="max-w-full max-h-[480px] object-contain"
+              className="max-w-full max-h-[700px] object-contain"
             />
           )
         )}
