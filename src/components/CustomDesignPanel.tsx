@@ -75,8 +75,8 @@ export const CustomDesignPanel: React.FC<CustomDesignPanelProps> = ({
               <embed
                 src={file.url}
                 type="application/pdf"
-                className="max-w-full max-h-[460px] rounded border border-emerald-200"
-                style={{ width: '400px', minHeight: '700px' }}
+                className="max-w-full max-h-[750px] rounded border border-emerald-200"
+                style={{ width: '400px', minHeight: '750px' }}
               />
               <a
                 href={file.url}
