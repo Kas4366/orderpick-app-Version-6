@@ -113,19 +113,22 @@ export const GroupedOrderItemCard: React.FC<GroupedOrderItemCardProps> = ({
           {customDesigns.length > 0 ? (
             <div className="space-y-2">
               {/* Custom Design Images */}
-              <div className="bg-emerald-50 rounded-lg overflow-hidden relative border-2 border-emerald-300" style={{ minHeight: '200px' }}>
+              <div className="bg-emerald-50 rounded-lg overflow-hidden relative border-2 border-emerald-300" style={{ minHeight: 'clamp(280px, 35vh, 420px)' }}>
                 <div className="absolute top-1 left-1 bg-emerald-600 text-white text-xs font-bold px-2 py-1 rounded z-10">
                   Custom Design
                 </div>
-                <div className="flex flex-wrap items-center justify-center gap-2 p-2">
+                <div className="w-full h-full flex flex-wrap items-center justify-center gap-2 p-3">
                   {customDesigns.map((designFile, idx) => (
                     designFile.isPdf ? (
                       <div key={idx} className="flex flex-col items-center gap-1">
                         <embed
                           src={designFile.url}
                           type="application/pdf"
-                          className="max-w-full max-h-[180px] rounded border border-emerald-200"
-                          style={{ width: '200px', minHeight: '150px' }}
+                          className="w-full max-w-[360px] rounded border border-emerald-200"
+                          style={{
+                            width: 'min(100%, 360px)',
+                            height: 'clamp(220px, 30vh, 360px)'
+                          }}
                         />
                         <a
                           href={designFile.url}
@@ -141,7 +144,8 @@ export const GroupedOrderItemCard: React.FC<GroupedOrderItemCardProps> = ({
                         key={idx}
                         src={designFile.url}
                         alt={`Custom design ${idx + 1} for ${item.sku}`}
-                        className="max-w-full max-h-[180px] object-contain"
+                        className="max-w-full object-contain"
+                        style={{ maxHeight: 'clamp(220px, 30vh, 360px)' }}
                       />
                     )
                   ))}

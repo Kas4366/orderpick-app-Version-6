@@ -17,7 +17,7 @@ export const CustomDesignPanel: React.FC<CustomDesignPanelProps> = ({
   itemPosition,
   customDesignFolderHandle = null,
   className = '',
-  minHeight = '500px',
+  minHeight = 'clamp(500px, calc(100vh - 240px), 700px)',
   label = 'Custom Design',
 }) => {
   const [designFiles, setDesignFiles] = useState<CustomDesignFile[]>([]);
@@ -68,15 +68,18 @@ export const CustomDesignPanel: React.FC<CustomDesignPanelProps> = ({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-center gap-2 p-2">
+      <div className="w-full h-full flex flex-wrap items-center justify-center gap-2 p-3">
         {designFiles.map((file, idx) =>
           file.isPdf ? (
             <div key={idx} className="flex flex-col items-center gap-1">
               <embed
                 src={file.url}
                 type="application/pdf"
-                className="max-w-full max-h-[750px] rounded border border-emerald-200"
-                style={{ width: '400px', minHeight: '750px' }}
+                className="w-full max-w-[520px] rounded border border-emerald-200"
+                style={{
+                  width: 'min(100%, 520px)',
+                  height: 'clamp(420px, calc(100vh - 330px), 620px)'
+                }}
               />
               <a
                 href={file.url}
@@ -92,7 +95,8 @@ export const CustomDesignPanel: React.FC<CustomDesignPanelProps> = ({
               key={idx}
               src={file.url}
               alt={`Custom design ${idx + 1} for Veeqo ID ${veeqoOrderId}`}
-              className="max-w-full max-h-[700px] object-contain"
+              className="max-w-full object-contain"
+              style={{ maxHeight: 'clamp(420px, calc(100vh - 300px), 620px)' }}
             />
           )
         )}

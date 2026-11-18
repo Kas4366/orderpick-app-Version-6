@@ -876,19 +876,22 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
               {customDesignImages.length > 0 ? (
                 <div className="flex gap-3 h-full">
                   {/* Custom Design Images - Larger */}
-                  <div className="flex-1 bg-emerald-50 rounded-lg overflow-hidden relative flex items-center justify-center border-2 border-emerald-300" style={{ minHeight: '500px' }}>
+                  <div className="flex-1 bg-emerald-50 rounded-lg overflow-hidden relative flex items-center justify-center border-2 border-emerald-300" style={{ minHeight: 'clamp(500px, calc(100vh - 240px), 700px)' }}>
                     <div className="absolute top-2 left-2 bg-emerald-600 text-white text-xs font-bold px-2 py-1 rounded z-10">
                       Custom Design
                     </div>
-                    <div className="flex flex-wrap items-center justify-center gap-2 p-2">
+                    <div className="w-full h-full flex flex-wrap items-center justify-center gap-2 p-3">
                       {customDesignImages.map((designFile, idx) => (
                         designFile.isPdf ? (
                           <div key={idx} className="flex flex-col items-center gap-1">
                             <embed
                               src={designFile.url}
                               type="application/pdf"
-                              className="max-w-full max-h-[460px] rounded border border-emerald-200"
-                              style={{ width: '400px', minHeight: '300px' }}
+                              className="w-full max-w-[520px] rounded border border-emerald-200"
+                              style={{
+                                width: 'min(100%, 520px)',
+                                height: 'clamp(420px, calc(100vh - 330px), 620px)'
+                              }}
                             />
                             <a
                               href={designFile.url}
@@ -904,7 +907,8 @@ export const OrderDisplay: React.FC<OrderDisplayProps> = ({
                             key={idx}
                             src={designFile.url}
                             alt={`Custom design ${idx + 1} for Veeqo ID ${order.veeqoOrderId}`}
-                            className="max-w-full max-h-[480px] object-contain"
+                            className="max-w-full object-contain"
+                            style={{ maxHeight: 'clamp(420px, calc(100vh - 300px), 620px)' }}
                           />
                         )
                       ))}
