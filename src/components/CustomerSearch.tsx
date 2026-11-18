@@ -60,6 +60,14 @@ export const CustomerSearch: React.FC<CustomerSearchProps> = ({
   }, [searchMode, onArrowNavigation, onCustomerSearch, onClearMessage, isBlocked]);
 
   const processScannedData = (scannedData: string) => {
+    const extractedOrderNumber = extractOrderNumberFromShippingBarcode(scannedData);
+    if (extractedOrderNumber) {
+      setSearchInput(extractedOrderNumber);
+      console.log('📦 Extracted order number from shipping barcode:', extractedOrderNumber);
+      onCustomerSearch(extractedOrderNumber);
+      return;
+    }
+
     const extractedPostcode = extractPostcodeFromQRData(scannedData);
     if (extractedPostcode) {
       console.log('📮 Extracted postcode from QR scan:', extractedPostcode);
@@ -68,6 +76,11 @@ export const CustomerSearch: React.FC<CustomerSearchProps> = ({
       console.log('🔍 No postcode found, searching with raw scanned data:', scannedData);
       onCustomerSearch(scannedData);
     }
+  };
+
+  const extractOrderNumberFromShippingBarcode = (barcodeData: string): string => {
+    const orderNumberMatch = barcodeData.match(/P2G[^|]*\|\|([^+|]+)\+{4}/i);
+    return orderNumberMatch?.[1].trim() || '';
   };
 
   const extractPostcodeFromQRData = (qrData: string): string => {
